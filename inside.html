@@ -6,7 +6,7 @@
   <title>Hocus Pocus | Private Access</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Cormorant+Garamond:wght@500;600&family=Cinzel:wght@500;600&display=swap" rel="stylesheet" />
   <style>
     :root {
       --bg: #121211;
@@ -33,15 +33,10 @@
     }
 
     .panel {
-      width: min(960px, 100%);
+      width: min(720px, 100%);
       margin: 0 auto;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: rgba(17, 13, 9, 0.72);
-      backdrop-filter: blur(8px);
-      padding: 30px;
       display: grid;
-      gap: 24px;
+      gap: 20px;
       animation: reveal 520ms ease-out;
     }
 
@@ -50,52 +45,205 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
+    /* ---- Header ---- */
+
+    .header {
+      text-align: center;
+      padding: 20px 0;
+    }
+
     .eyebrow {
       text-transform: uppercase;
-      letter-spacing: 0.16em;
+      letter-spacing: 0.18em;
       color: var(--signal);
-      font-size: 12px;
+      font-size: 11px;
+      margin-bottom: 12px;
     }
 
     h1 {
+      font-family: 'Cinzel', 'Cormorant Garamond', serif;
+      font-size: clamp(38px, 7vw, 60px);
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      line-height: 1;
+      color: #d0a168;
+      text-shadow:
+        0 0 16px rgba(208, 161, 104, 0.35),
+        0 0 42px rgba(208, 161, 104, 0.18);
+    }
+
+    .subtitle {
       font-family: 'Cormorant Garamond', serif;
-      font-size: clamp(36px, 7vw, 54px);
-      line-height: 0.95;
+      font-size: clamp(18px, 3vw, 24px);
+      color: var(--muted);
+      margin-top: 8px;
+      font-style: italic;
     }
 
     .meta {
       display: flex;
       flex-wrap: wrap;
+      justify-content: center;
       gap: 8px;
-      margin-top: 10px;
+      margin-top: 16px;
     }
 
     .chip {
       border: 1px solid var(--line);
       color: var(--muted);
-      padding: 8px 10px;
+      padding: 8px 12px;
       border-radius: 999px;
       font-size: 13px;
     }
 
+    /* ---- Cards ---- */
+
     .card {
       border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 18px;
-      background: rgba(255, 255, 255, 0.02);
+      border-radius: 14px;
+      padding: 22px;
+      background: rgba(17, 13, 9, 0.72);
+      backdrop-filter: blur(8px);
+    }
+
+    .card-label {
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--signal);
+      font-size: 11px;
+      margin-bottom: 10px;
     }
 
     h2 {
-      font-size: 18px;
-      margin-bottom: 8px;
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text);
     }
 
-    p, li {
+    p, li { color: var(--muted); line-height: 1.6; }
+
+    /* ---- Agenda ---- */
+
+    .agenda { display: grid; gap: 0; }
+
+    .agenda-item {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(74, 59, 45, 0.5);
+    }
+
+    .agenda-item:last-child { border-bottom: none; }
+
+    .agenda-time {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--signal);
+      padding-top: 2px;
+    }
+
+    .agenda-title {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 15px;
+      margin-bottom: 2px;
+    }
+
+    .agenda-desc {
+      font-size: 13px;
       color: var(--muted);
-      line-height: 1.55;
+      line-height: 1.5;
     }
 
-    ul { padding-left: 18px; display: grid; gap: 6px; }
+    /* ---- Hosts ---- */
+
+    .hosts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .host {
+      border-radius: 12px;
+      padding: 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+      transition: border-color 160ms ease, background-color 160ms ease;
+    }
+
+    .host:hover {
+      border-color: #5a4a3a;
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .host img {
+      width: 56px;
+      height: 56px;
+      border-radius: 10px;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 1px solid var(--line);
+    }
+
+    .host-name {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--signal);
+      margin-bottom: 2px;
+    }
+
+    .host-role {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.3;
+    }
+
+    /* ---- Venue gallery ---- */
+
+    .gallery {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .gallery img {
+      width: 100%;
+      aspect-ratio: 4/3;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+    }
+
+    /* ---- Ground rules ---- */
+
+    .rules { display: grid; gap: 8px; }
+
+    .rule {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+
+    .rule-icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      display: grid;
+      place-items: center;
+      color: var(--signal);
+      font-size: 14px;
+      margin-top: 1px;
+    }
+
+    /* ---- Invite section ---- */
 
     .row { display: flex; gap: 10px; flex-wrap: wrap; }
 
@@ -112,15 +260,19 @@
       flex: 1 1 240px;
     }
 
+    input:focus { outline: none; border-color: var(--signal); }
+
     button {
       background: var(--signal);
       color: #23180f;
       font-weight: 700;
       border: 0;
       cursor: pointer;
+      transition: transform 160ms ease, filter 160ms ease;
     }
 
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    button:hover { transform: translateY(-1px); filter: brightness(1.03); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 
     .mono {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -130,76 +282,238 @@
 
     .hidden { display: none; }
 
-    #status { color: var(--muted); min-height: 20px; }
+    #status { color: var(--muted); min-height: 20px; font-size: 14px; }
     #status.error { color: var(--danger); }
     #status.ok { color: var(--accent); }
 
     #invite-link-wrap {
       margin-top: 10px;
-      padding: 10px;
+      padding: 12px;
       border-radius: 10px;
       border: 1px dashed var(--line);
       display: none;
+    }
+
+    /* ---- Map link ---- */
+
+    .map-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--signal);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 10px;
+      transition: opacity 160ms ease;
+    }
+
+    .map-link:hover { opacity: 0.8; }
+
+    /* ---- Footer ---- */
+
+    .footer {
+      text-align: center;
+      padding: 8px 0;
+      font-size: 12px;
+    }
+
+    .footer a {
+      color: #6b5f50;
+      text-decoration: none;
+    }
+
+    .footer a:hover { text-decoration: underline; }
+
+    /* ---- Responsive ---- */
+
+    @media (max-width: 640px) {
+      .hosts { grid-template-columns: 1fr; }
+      .gallery { grid-template-columns: 1fr 1fr; }
+      .gallery img:nth-child(3) { display: none; }
+      .agenda-item { grid-template-columns: 60px 1fr; gap: 10px; }
     }
   </style>
 </head>
 <body>
   <main class="panel">
-    <section id="locked-view" class="card hidden">
+
+    <!-- ============ LOCKED VIEW ============ -->
+    <section id="locked-view" class="card hidden" style="text-align:center;padding:40px 20px;">
       <p class="eyebrow">Private Access</p>
       <h2>Access token required</h2>
       <p>Use your private link to enter the full event page.</p>
     </section>
 
+    <!-- ============ CLAIM VIEW ============ -->
     <section id="claim-view" class="card hidden">
-      <p class="eyebrow">Claim Invite</p>
-      <h2>Finish your invite claim</h2>
-      <p>Invites are one-time and expire 48 hours after creation.</p>
-      <form id="claim-form" class="row" style="margin-top: 12px;">
-        <input id="claim-email" type="email" placeholder="Email" required />
-        <input id="claim-linkedin" type="url" placeholder="LinkedIn URL" required />
-        <button id="claim-btn" type="submit">Claim access</button>
+      <p class="eyebrow">You've Been Invited</p>
+      <h2>Confirm Your Seat</h2>
+      <p>Someone has personally invited you to Hocus Pocus. Enter your LinkedIn profile to claim your spot.</p>
+      <form id="claim-form" style="margin-top: 14px; display: grid; gap: 10px;">
+        <input id="claim-email" type="email" placeholder="Business Email" required />
+        <input id="claim-linkedin" type="url" placeholder="LinkedIn Profile (https://linkedin.com/in/...)" required />
+        <button id="claim-btn" type="submit">Confirm My Seat</button>
       </form>
-      <p id="claim-status" style="margin-top: 8px;"></p>
+      <p id="claim-status" style="margin-top: 8px; font-size: 14px;"></p>
     </section>
 
+    <!-- ============ INSIDE VIEW ============ -->
     <section id="inside-view" class="hidden">
-      <div>
-        <p class="eyebrow">Private Details</p>
+
+      <!-- Header -->
+      <div class="header">
+        <p class="eyebrow">Episode 01</p>
         <h1>Hocus Pocus</h1>
-        <div class="meta" id="event-meta"></div>
+        <p class="subtitle">No Wands. No BS. Just What Works.</p>
+        <div class="meta">
+          <span class="chip">Wednesday, March 25, 2026</span>
+          <span class="chip">6:00 PM</span>
+          <span class="chip">Vienna</span>
+        </div>
       </div>
 
+      <!-- About -->
       <article class="card">
-        <h2>Event</h2>
-        <ul>
-          <li><strong>Date:</strong> Wednesday, March 25, 2026</li>
-          <li><strong>Start:</strong> 6:00 PM</li>
-          <li><strong>Venue:</strong> Ruby Paul Workspace, Vienna</li>
-          <li><strong>Format:</strong> Closed-room conversation, no recording</li>
-        </ul>
-      </article>
-
-      <article class="card">
-        <h2>Location Details</h2>
+        <p class="card-label">The Premise</p>
+        <h2>A closed-room conversation for leaders navigating real transformation</h2>
         <p>
-          The session is hosted at Ruby Paul Workspace in Vienna. Arrival starts at 5:40 PM,
-          conversation begins at 6:00 PM sharp. If your status changes, use your private token link again.
+          Hocus Pocus is an intimate, invite-only event series for decision-makers who are tired of buzzwords and ready for honest conversation about what actually works.
+        </p>
+        <p style="margin-top: 10px;">
+          No slides. No sponsors. No recording. Just a room full of sharp minds, a focused topic, and the freedom to speak openly.
         </p>
       </article>
 
+      <!-- Agenda -->
       <article class="card">
-        <h2>Your invite quota</h2>
-        <p id="invite-count">Loading invite status...</p>
+        <p class="card-label">The Ritual</p>
+        <div class="agenda">
+          <div class="agenda-item">
+            <span class="agenda-time">6:00 PM</span>
+            <div>
+              <p class="agenda-title">Welcome & Introduction</p>
+              <p class="agenda-desc">Doors open. Settle in, meet the room.</p>
+            </div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-time">6:15 PM</span>
+            <div>
+              <p class="agenda-title">The Invocation</p>
+              <p class="agenda-desc">A 45-minute point of view by Joanna Bakas and Thomas Pisar. Framing the problem, sharing real experience, no hand-waving.</p>
+            </div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-time">7:00 PM</span>
+            <div>
+              <p class="agenda-title">The Seance</p>
+              <p class="agenda-desc">45 minutes of open Q&A and guided conversation. Everyone contributes. The best ideas come from the room.</p>
+            </div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-time">7:45 PM</span>
+            <div>
+              <p class="agenda-title">The Elixir Bar</p>
+              <p class="agenda-desc">Fingerfood, drinks & conspiration. The conversations that matter most often happen after the formal part ends.</p>
+            </div>
+          </div>
+          <div class="agenda-item">
+            <span class="agenda-time">9:00 PM</span>
+            <div>
+              <p class="agenda-title">Close</p>
+              <p class="agenda-desc">Until next time.</p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Hosts -->
+      <article class="card">
+        <p class="card-label">Your Hosts</p>
+        <div class="hosts">
+          <a class="host" href="https://www.linkedin.com/in/joannabakas/" target="_blank" rel="noreferrer">
+            <img src="Joanna.jpeg" alt="Joanna Bakas" loading="lazy" />
+            <div>
+              <p class="host-name">Joanna Bakas</p>
+              <p class="host-role">Managing Partner, Frontira</p>
+            </div>
+          </a>
+          <a class="host" href="https://www.linkedin.com/in/thomas-pisar/" target="_blank" rel="noreferrer">
+            <img src="Thomas.jpeg" alt="Thomas Pisar" loading="lazy" />
+            <div>
+              <p class="host-name">Thomas Pisar</p>
+              <p class="host-role">Keynote Speaker for AI, Complexity & Leadership</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <!-- Venue -->
+      <article class="card">
+        <p class="card-label">The Location</p>
+        <h2>Ruby Paul Workspace</h2>
+        <p>
+          A historic postal palace in Vienna's first district, reimagined as a creative workspace. Leather sofas, a curated bar, vintage typewriters, and the kind of atmosphere that makes real conversations happen.
+        </p>
+        <p style="margin-top: 8px;">
+          <strong style="color: var(--text);">Postgasse 8b, 1010 Vienna</strong><br />
+          Nearest transit: Schwedenplatz (U1/U4) and Stubentor (U3)
+        </p>
+        <a class="map-link" href="https://www.google.com/maps/search/?api=1&query=Ruby+Paul+Workspace+Postgasse+8b+1010+Wien" target="_blank" rel="noreferrer">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Open in Google Maps
+        </a>
+        <div class="gallery">
+          <img src="ruby-paul-1.webp" alt="Ruby Paul Workspace lounge" loading="lazy" />
+          <img src="ruby-paul-2.webp" alt="Ruby Paul Workspace bar area" loading="lazy" />
+          <img src="ruby-paul-3.webp" alt="Ruby Paul Workspace seating" loading="lazy" />
+        </div>
+      </article>
+
+      <!-- Ground rules -->
+      <article class="card">
+        <p class="card-label">The Rules</p>
+        <div class="rules">
+          <div class="rule">
+            <span class="rule-icon">&#9679;</span>
+            <span><strong style="color: var(--text);">Chatham House Rules.</strong> Share the ideas, never the source. What's said in the room stays in the room.</span>
+          </div>
+          <div class="rule">
+            <span class="rule-icon">&#9679;</span>
+            <span><strong style="color: var(--text);">No recording.</strong> No photos of the conversation, no live-tweeting, no summaries posted online.</span>
+          </div>
+          <div class="rule">
+            <span class="rule-icon">&#9679;</span>
+            <span><strong style="color: var(--text);">Be on time.</strong> Doors open at 6:00 PM. We start together.</span>
+          </div>
+          <div class="rule">
+            <span class="rule-icon">&#9679;</span>
+            <span><strong style="color: var(--text);">Come to contribute.</strong> This is a conversation, not a lecture. Your perspective matters.</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- Invite section -->
+      <article class="card">
+        <p class="card-label">Your Invites</p>
+        <h2>Bring someone worth talking to</h2>
+        <p>Each guest can invite up to 2 people. Invites are one-time use and expire after 24 hours.</p>
+        <p id="invite-count" style="margin-top: 10px; color: var(--text); font-weight: 500;">Loading invite status...</p>
         <div class="row" style="margin-top: 12px;">
           <button id="create-invite-btn" type="button">Generate invite link</button>
         </div>
         <div id="invite-link-wrap">
-          <p>Share this one-time link (valid for 48 hours):</p>
-          <p id="invite-link" class="mono"></p>
+          <p style="font-size: 13px;">Share this one-time link (expires in 24 hours):</p>
+          <p id="invite-link" class="mono" style="margin-top: 6px; font-size: 13px;"></p>
         </div>
-        <p id="status"></p>
+        <p id="status" style="margin-top: 8px;"></p>
       </article>
+
+      <!-- Footer -->
+      <div class="footer">
+        <p style="color: #6b5f50;">Hocus Pocus by <a href="https://frontira.io" target="_blank" rel="noreferrer">Frontira</a></p>
+      </div>
+
     </section>
   </main>
 
@@ -216,7 +530,6 @@
     const claimStatus = document.getElementById('claim-status');
     const claimBtn = document.getElementById('claim-btn');
 
-    const metaEl = document.getElementById('event-meta');
     const inviteCountEl = document.getElementById('invite-count');
     const createInviteBtn = document.getElementById('create-invite-btn');
     const statusEl = document.getElementById('status');
@@ -243,17 +556,9 @@
         throw new Error(data.error || 'Access denied');
       }
 
-      metaEl.innerHTML = '';
-      [data.event.dateLabel, data.event.timeLabel, data.event.city, data.event.location].forEach((item) => {
-        const span = document.createElement('span');
-        span.className = 'chip';
-        span.textContent = item;
-        metaEl.appendChild(span);
-      });
-
       inviteCountEl.textContent = `Invites remaining: ${data.invites.remaining} of ${data.invites.limit}`;
       createInviteBtn.disabled = data.invites.remaining <= 0;
-      createInviteBtn.textContent = data.invites.remaining <= 0 ? 'Invite limit reached' : 'Generate invite link';
+      createInviteBtn.textContent = data.invites.remaining <= 0 ? 'All invites used' : 'Generate invite link';
 
       activeMemberToken = token;
       show(insideView);
@@ -280,7 +585,7 @@
         inviteLinkEl.textContent = data.inviteUrl;
         inviteLinkWrap.style.display = 'block';
         statusEl.className = 'ok';
-        statusEl.textContent = `Invite created. Expires at ${new Date(data.expiresAt).toLocaleString()}.`;
+        statusEl.textContent = `Invite created. Expires ${new Date(data.expiresAt).toLocaleString()}.`;
 
         await loadInside(activeMemberToken);
       } catch (error) {
@@ -293,7 +598,7 @@
     claimForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       claimStatus.className = '';
-      claimStatus.textContent = 'Claiming invite...';
+      claimStatus.textContent = 'Confirming your seat...';
       claimBtn.disabled = true;
 
       try {
@@ -319,7 +624,7 @@
         await loadInside(data.memberToken);
       } catch (error) {
         claimStatus.className = 'error';
-        claimStatus.textContent = error.message || 'Claim failed';
+        claimStatus.textContent = error.message || 'Could not confirm your seat. The invite may have expired.';
       } finally {
         claimBtn.disabled = false;
       }
