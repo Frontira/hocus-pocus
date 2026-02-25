@@ -1,5 +1,5 @@
 import { claimInvite } from '../_storage.js';
-import { sendInviteClaimedNotice } from '../_email.js';
+import { sendApprovalEmail, sendInviteClaimedNotice } from '../_email.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,6 +15,12 @@ export default async function handler(req, res) {
     if (result.error) {
       return res.status(400).json({ error: result.error });
     }
+
+    // Send "You're in" email to the new member (fire and forget)
+    sendApprovalEmail({
+      email,
+      memberToken: result.member.accessToken,
+    }).catch((err) => console.error('[email] claim approval email failed', err));
 
     // Notify inviter (fire and forget)
     if (result.inviter) {
