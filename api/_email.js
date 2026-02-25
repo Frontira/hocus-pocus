@@ -144,6 +144,32 @@ async function sendRejectionEmail({ email }) {
   return send({ to: email, subject: 'Hocus Pocus - Application Update', html });
 }
 
+/** Send invite email to a guest on behalf of an existing member */
+async function sendInviteEmail({ recipientEmail, inviterEmail, inviteUrl, expiresAt }) {
+  const expiry = new Date(expiresAt).toLocaleString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+  });
+
+  const html = wrap([
+    heading("You've Been Invited"),
+    paragraph(`<strong style="color:#f8f2e9;">${inviterEmail}</strong> has personally invited you to Hocus Pocus - an intimate, invite-only conversation for leaders in Vienna.`),
+    `<div style="background:#1a1610;border:1px solid #2a2218;border-radius:10px;padding:16px;margin:16px 0;">`,
+    detail('Date', 'Wednesday, March 25, 2026'),
+    detail('Time', '6:00 PM'),
+    detail('Location', 'Ruby Paul Workspace, Vienna'),
+    `</div>`,
+    btn(inviteUrl, 'Accept Your Invitation'),
+    paragraph(`This invitation expires <strong style="color:#f8f2e9;">${expiry}</strong> and can only be used once.`),
+  ].join('\n'));
+
+  return send({
+    to: recipientEmail,
+    subject: `You've been invited to Hocus Pocus`,
+    html,
+    replyTo: inviterEmail,
+  });
+}
+
 /** Notify inviter that their invite was claimed */
 async function sendInviteClaimedNotice({ inviterEmail, claimerEmail, remaining }) {
   const html = wrap([
@@ -163,5 +189,6 @@ export {
   sendNewApplicationNotice,
   sendApprovalEmail,
   sendRejectionEmail,
+  sendInviteEmail,
   sendInviteClaimedNotice,
 };

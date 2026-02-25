@@ -1,4 +1,5 @@
-import { createInviteForMember } from '../_storage.js';
+import { createInviteForMember, findMemberByToken } from '../_storage.js';
+import { sendInviteEmail } from '../_email.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -7,16 +8,29 @@ export default async function handler(req, res) {
 
   try {
     const memberToken = String(req.body?.memberToken || '').trim();
+    const recipientEmail = String(req.body?.recipientEmail || '').trim();
     const origin = String(req.body?.origin || req.headers.origin || '').trim();
 
     if (!memberToken) {
       return res.status(400).json({ error: 'memberToken is required' });
     }
+    if (!recipientEmail) {
+      return res.status(400).json({ error: 'recipientEmail is required' });
+    }
 
+    const member = await findMemberByToken(memberToken);
     const result = await createInviteForMember(memberToken, origin);
     if (result.error) {
       return res.status(400).json({ error: result.error });
     }
+
+    // Send invite email (fire and forget)
+    sendInviteEmail({
+      recipientEmail,
+      inviterEmail: member?.email || 'a guest',
+      inviteUrl: result.inviteUrl,
+      expiresAt: result.invite.expiresAt,
+    }).catch((err) => console.error('[email] invite email failed', err));
 
     return res.status(200).json({
       success: true,

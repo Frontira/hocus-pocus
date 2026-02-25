@@ -497,14 +497,16 @@
       <article class="card">
         <p class="card-label">Your Invites</p>
         <h2>Bring someone worth talking to</h2>
-        <p>Each guest can invite up to 2 people. Invites are one-time use and expire after 24 hours.</p>
+        <p>Each guest can invite up to 2 people. Enter their email and we'll send a personal invitation on your behalf. Invites expire after 24 hours.</p>
         <p id="invite-count" style="margin-top: 10px; color: var(--text); font-weight: 500;">Loading invite status...</p>
-        <div class="row" style="margin-top: 12px;">
-          <button id="create-invite-btn" type="button">Generate invite link</button>
-        </div>
+        <form id="invite-form" class="row" style="margin-top: 12px;">
+          <input id="invite-email" type="email" placeholder="Their email address" required />
+          <button id="create-invite-btn" type="submit">Send Invite</button>
+        </form>
         <div id="invite-link-wrap">
-          <p style="font-size: 13px;">Share this one-time link (expires in 24 hours):</p>
+          <p style="font-size: 13px; color: var(--signal); font-weight: 500;">Invitation sent. The link below is shown only once:</p>
           <p id="invite-link" class="mono" style="margin-top: 6px; font-size: 13px;"></p>
+          <p style="font-size: 12px; color: var(--muted); margin-top: 8px;">Copy it now if you want to share it another way. It won't be shown again.</p>
         </div>
         <p id="status" style="margin-top: 8px;"></p>
       </article>
@@ -531,6 +533,8 @@
     const claimBtn = document.getElementById('claim-btn');
 
     const inviteCountEl = document.getElementById('invite-count');
+    const inviteForm = document.getElementById('invite-form');
+    const inviteEmailInput = document.getElementById('invite-email');
     const createInviteBtn = document.getElementById('create-invite-btn');
     const statusEl = document.getElementById('status');
     const inviteLinkWrap = document.getElementById('invite-link-wrap');
@@ -545,6 +549,14 @@
       view.classList.remove('hidden');
     }
 
+    function updateInviteUI(remaining) {
+      inviteCountEl.textContent = `Invites remaining: ${remaining} of 2`;
+      if (remaining <= 0) {
+        inviteForm.style.display = 'none';
+        inviteCountEl.textContent = 'All invites used';
+      }
+    }
+
     async function loadInside(token) {
       const response = await fetch('/api/access', {
         method: 'POST',
@@ -556,41 +568,50 @@
         throw new Error(data.error || 'Access denied');
       }
 
-      inviteCountEl.textContent = `Invites remaining: ${data.invites.remaining} of ${data.invites.limit}`;
-      createInviteBtn.disabled = data.invites.remaining <= 0;
-      createInviteBtn.textContent = data.invites.remaining <= 0 ? 'All invites used' : 'Generate invite link';
-
+      updateInviteUI(data.invites.remaining);
       activeMemberToken = token;
       show(insideView);
     }
 
-    createInviteBtn.addEventListener('click', async () => {
+    inviteForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
       if (!activeMemberToken) return;
+
+      const recipientEmail = inviteEmailInput.value.trim();
+      if (!recipientEmail) return;
+
       statusEl.className = '';
-      statusEl.textContent = 'Generating...';
+      statusEl.textContent = 'Sending invitation...';
       createInviteBtn.disabled = true;
+      inviteLinkWrap.style.display = 'none';
 
       try {
         const response = await fetch('/api/invites/create', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ memberToken: activeMemberToken, origin: window.location.origin }),
+          body: JSON.stringify({
+            memberToken: activeMemberToken,
+            recipientEmail,
+            origin: window.location.origin,
+          }),
         });
 
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-          throw new Error(data.error || 'Could not create invite');
+          throw new Error(data.error || 'Could not send invite');
         }
 
         inviteLinkEl.textContent = data.inviteUrl;
         inviteLinkWrap.style.display = 'block';
         statusEl.className = 'ok';
-        statusEl.textContent = `Invite created. Expires ${new Date(data.expiresAt).toLocaleString()}.`;
+        statusEl.textContent = `Invitation sent to ${recipientEmail}.`;
+        inviteEmailInput.value = '';
 
-        await loadInside(activeMemberToken);
+        updateInviteUI(data.remainingAfterCreate);
       } catch (error) {
         statusEl.className = 'error';
-        statusEl.textContent = error.message || 'Invite generation failed';
+        statusEl.textContent = error.message || 'Failed to send invite';
+      } finally {
         createInviteBtn.disabled = false;
       }
     });
