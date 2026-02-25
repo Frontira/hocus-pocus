@@ -22,7 +22,7 @@ function wrap(innerHtml) {
       ${innerHtml}
       <hr style="border:none;border-top:1px solid #2a2218;margin:32px 0 16px 0;" />
       <p style="color:#6b5f50;font-size:11px;text-align:center;margin:0;">
-        Hocus Pocus by <a href="https://frontira.io" style="color:#6b5f50;">Frontira</a> &middot; Vienna
+        Hocus Pocus by <a href="https://frontira.io" style="color:#6b5f50;">frontira</a> &middot; Vienna
       </p>
     </div>
   </div>
