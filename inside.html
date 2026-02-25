@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hocus Pocus | Private Access</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #121211;
+      --bg-alt: #1f1915;
+      --line: #4a3b2d;
+      --text: #f8f2e9;
+      --muted: #b9aa96;
+      --signal: #f0b56f;
+      --accent: #84c7b5;
+      --danger: #f07c6f;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Space Grotesk', sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 18%, rgba(240, 181, 111, 0.16), transparent 35%),
+        radial-gradient(circle at 82% 0%, rgba(132, 199, 181, 0.12), transparent 40%),
+        linear-gradient(160deg, var(--bg) 0%, var(--bg-alt) 100%);
+      padding: 24px;
+    }
+
+    .panel {
+      width: min(960px, 100%);
+      margin: 0 auto;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(17, 13, 9, 0.72);
+      backdrop-filter: blur(8px);
+      padding: 30px;
+      display: grid;
+      gap: 24px;
+      animation: reveal 520ms ease-out;
+    }
+
+    @keyframes reveal {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--signal);
+      font-size: 12px;
+    }
+
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(36px, 7vw, 54px);
+      line-height: 0.95;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .chip {
+      border: 1px solid var(--line);
+      color: var(--muted);
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 18px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    h2 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    p, li {
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    ul { padding-left: 18px; display: grid; gap: 6px; }
+
+    .row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    input, button {
+      font: inherit;
+      border-radius: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+    }
+
+    input {
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text);
+      flex: 1 1 240px;
+    }
+
+    button {
+      background: var(--signal);
+      color: #23180f;
+      font-weight: 700;
+      border: 0;
+      cursor: pointer;
+    }
+
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: var(--accent);
+      word-break: break-all;
+    }
+
+    .hidden { display: none; }
+
+    #status { color: var(--muted); min-height: 20px; }
+    #status.error { color: var(--danger); }
+    #status.ok { color: var(--accent); }
+
+    #invite-link-wrap {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px dashed var(--line);
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <main class="panel">
+    <section id="locked-view" class="card hidden">
+      <p class="eyebrow">Private Access</p>
+      <h2>Access token required</h2>
+      <p>Use your private link to enter the full event page.</p>
+    </section>
+
+    <section id="claim-view" class="card hidden">
+      <p class="eyebrow">Claim Invite</p>
+      <h2>Finish your invite claim</h2>
+      <p>Invites are one-time and expire 48 hours after creation.</p>
+      <form id="claim-form" class="row" style="margin-top: 12px;">
+        <input id="claim-email" type="email" placeholder="Email" required />
+        <input id="claim-linkedin" type="url" placeholder="LinkedIn URL" required />
+        <button id="claim-btn" type="submit">Claim access</button>
+      </form>
+      <p id="claim-status" style="margin-top: 8px;"></p>
+    </section>
+
+    <section id="inside-view" class="hidden">
+      <div>
+        <p class="eyebrow">Private Details</p>
+        <h1>Hocus Pocus</h1>
+        <div class="meta" id="event-meta"></div>
+      </div>
+
+      <article class="card">
+        <h2>Event</h2>
+        <ul>
+          <li><strong>Date:</strong> Wednesday, March 25, 2026</li>
+          <li><strong>Start:</strong> 6:00 PM</li>
+          <li><strong>Venue:</strong> Ruby Paul Workspace, Vienna</li>
+          <li><strong>Format:</strong> Closed-room conversation, no recording</li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <h2>Location Details</h2>
+        <p>
+          The session is hosted at Ruby Paul Workspace in Vienna. Arrival starts at 5:40 PM,
+          conversation begins at 6:00 PM sharp. If your status changes, use your private token link again.
+        </p>
+      </article>
+
+      <article class="card">
+        <h2>Your invite quota</h2>
+        <p id="invite-count">Loading invite status...</p>
+        <div class="row" style="margin-top: 12px;">
+          <button id="create-invite-btn" type="button">Generate invite link</button>
+        </div>
+        <div id="invite-link-wrap">
+          <p>Share this one-time link (valid for 48 hours):</p>
+          <p id="invite-link" class="mono"></p>
+        </div>
+        <p id="status"></p>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    const qs = new URLSearchParams(window.location.search);
+    const memberToken = qs.get('token') || '';
+    const inviteToken = qs.get('invite') || '';
+
+    const lockedView = document.getElementById('locked-view');
+    const claimView = document.getElementById('claim-view');
+    const insideView = document.getElementById('inside-view');
+
+    const claimForm = document.getElementById('claim-form');
+    const claimStatus = document.getElementById('claim-status');
+    const claimBtn = document.getElementById('claim-btn');
+
+    const metaEl = document.getElementById('event-meta');
+    const inviteCountEl = document.getElementById('invite-count');
+    const createInviteBtn = document.getElementById('create-invite-btn');
+    const statusEl = document.getElementById('status');
+    const inviteLinkWrap = document.getElementById('invite-link-wrap');
+    const inviteLinkEl = document.getElementById('invite-link');
+
+    let activeMemberToken = memberToken;
+
+    function show(view) {
+      lockedView.classList.add('hidden');
+      claimView.classList.add('hidden');
+      insideView.classList.add('hidden');
+      view.classList.remove('hidden');
+    }
+
+    async function loadInside(token) {
+      const response = await fetch('/api/access', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || 'Access denied');
+      }
+
+      metaEl.innerHTML = '';
+      [data.event.dateLabel, data.event.timeLabel, data.event.city, data.event.location].forEach((item) => {
+        const span = document.createElement('span');
+        span.className = 'chip';
+        span.textContent = item;
+        metaEl.appendChild(span);
+      });
+
+      inviteCountEl.textContent = `Invites remaining: ${data.invites.remaining} of ${data.invites.limit}`;
+      createInviteBtn.disabled = data.invites.remaining <= 0;
+      createInviteBtn.textContent = data.invites.remaining <= 0 ? 'Invite limit reached' : 'Generate invite link';
+
+      activeMemberToken = token;
+      show(insideView);
+    }
+
+    createInviteBtn.addEventListener('click', async () => {
+      if (!activeMemberToken) return;
+      statusEl.className = '';
+      statusEl.textContent = 'Generating...';
+      createInviteBtn.disabled = true;
+
+      try {
+        const response = await fetch('/api/invites/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ memberToken: activeMemberToken, origin: window.location.origin }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || 'Could not create invite');
+        }
+
+        inviteLinkEl.textContent = data.inviteUrl;
+        inviteLinkWrap.style.display = 'block';
+        statusEl.className = 'ok';
+        statusEl.textContent = `Invite created. Expires at ${new Date(data.expiresAt).toLocaleString()}.`;
+
+        await loadInside(activeMemberToken);
+      } catch (error) {
+        statusEl.className = 'error';
+        statusEl.textContent = error.message || 'Invite generation failed';
+        createInviteBtn.disabled = false;
+      }
+    });
+
+    claimForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      claimStatus.className = '';
+      claimStatus.textContent = 'Claiming invite...';
+      claimBtn.disabled = true;
+
+      try {
+        const response = await fetch('/api/invites/claim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inviteToken,
+            email: document.getElementById('claim-email').value.trim(),
+            linkedin: document.getElementById('claim-linkedin').value.trim(),
+          }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || 'Claim failed');
+        }
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete('invite');
+        url.searchParams.set('token', data.memberToken);
+        window.history.replaceState({}, '', url.toString());
+        await loadInside(data.memberToken);
+      } catch (error) {
+        claimStatus.className = 'error';
+        claimStatus.textContent = error.message || 'Claim failed';
+      } finally {
+        claimBtn.disabled = false;
+      }
+    });
+
+    (async function init() {
+      if (memberToken) {
+        try {
+          await loadInside(memberToken);
+        } catch (error) {
+          show(lockedView);
+        }
+        return;
+      }
+
+      if (inviteToken) {
+        show(claimView);
+        return;
+      }
+
+      show(lockedView);
+    })();
+  </script>
+</body>
+</html>

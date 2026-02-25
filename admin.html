@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hocus Pocus | Admin</title>
+  <style>
+    :root {
+      --bg: #111317;
+      --panel: #191d24;
+      --line: #2d3748;
+      --text: #eef2f8;
+      --muted: #94a3b8;
+      --ok: #71d3a1;
+      --warn: #f0bf72;
+      --danger: #ef7d7d;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .shell {
+      width: min(1100px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+    }
+
+    h1 { font-size: 20px; margin-bottom: 8px; }
+    p { color: var(--muted); }
+
+    .row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+    input, button, select {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #0f141d;
+      color: var(--text);
+      padding: 8px 10px;
+      font: inherit;
+    }
+
+    input { flex: 1 1 260px; }
+
+    button {
+      cursor: pointer;
+      background: #203149;
+    }
+
+    button.approve { background: #1c4735; }
+    button.reject { background: #4c2c2c; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      padding: 8px 6px;
+      vertical-align: top;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      border: 1px solid var(--line);
+    }
+
+    .tag.pending { color: var(--warn); }
+    .tag.approved { color: var(--ok); }
+    .tag.rejected { color: var(--danger); }
+
+    #status { min-height: 18px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="card">
+      <h1>Hocus Pocus Admin</h1>
+      <p>Review applications and approve members to issue private token links.</p>
+      <div class="row">
+        <button id="logout-btn">Logout</button>
+      </div>
+      <p id="status"></p>
+    </section>
+
+    <section class="card">
+      <div class="row" style="margin-top: 0;">
+        <select id="status-filter">
+          <option value="all">All</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+        </select>
+        <button id="refresh-btn">Refresh</button>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Created</th>
+            <th>Email</th>
+            <th>LinkedIn</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    const rows = document.getElementById('rows');
+    const statusEl = document.getElementById('status');
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        ...options,
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options.headers || {}),
+        },
+      });
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || 'Request failed');
+      }
+      return data;
+    }
+
+    function formatDate(iso) {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return '-';
+      return date.toLocaleString();
+    }
+
+    function applicationRow(app) {
+      const tr = document.createElement('tr');
+      const accessLink = app.memberToken
+        ? `${window.location.origin}/inside.html?token=${encodeURIComponent(app.memberToken)}`
+        : '';
+
+      tr.innerHTML = `
+        <td>${formatDate(app.createdAt)}</td>
+        <td>${app.email || '-'}</td>
+        <td><a href="${app.linkedin || '#'}" target="_blank" rel="noreferrer">${app.linkedin || '-'}</a></td>
+        <td><span class="tag ${app.status || 'pending'}">${app.status || 'pending'}</span></td>
+        <td>
+          <div class="row" style="margin-top:0;">
+            ${app.status === 'pending' ? `<button class="approve" data-id="${app.id}" data-action="approve">Approve</button>` : ''}
+            ${app.status === 'pending' ? `<button class="reject" data-id="${app.id}" data-action="reject">Reject</button>` : ''}
+          </div>
+          ${accessLink ? `<div class="mono" style="margin-top:6px;">${accessLink}</div>` : ''}
+        </td>
+      `;
+
+      return tr;
+    }
+
+    async function loadApplications() {
+      statusEl.textContent = 'Loading applications...';
+      try {
+        const filter = document.getElementById('status-filter').value;
+        const data = await api('/api/admin/applications');
+
+        rows.innerHTML = '';
+        const apps = data.applications.filter((item) => filter === 'all' || item.status === filter);
+        apps.forEach((app) => rows.appendChild(applicationRow(app)));
+
+        if (apps.length === 0) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="5">No applications</td>';
+          rows.appendChild(tr);
+        }
+
+        statusEl.style.color = 'var(--ok)';
+        statusEl.textContent = `Loaded ${apps.length} applications`;
+      } catch (error) {
+        statusEl.style.color = 'var(--danger)';
+        statusEl.textContent = error.message || 'Failed to load applications';
+      }
+    }
+
+    async function logout() {
+      try {
+        await fetch('/api/admin/logout', {
+          method: 'POST',
+          credentials: 'same-origin',
+        });
+      } finally {
+        window.location.href = '/admin-login.html';
+      }
+    }
+
+    async function updateStatus(applicationId, action) {
+      statusEl.style.color = 'var(--muted)';
+      statusEl.textContent = `${action === 'approve' ? 'Approving' : 'Rejecting'}...`;
+      try {
+        await api(`/api/admin/${action}`, {
+          method: 'POST',
+          body: JSON.stringify({ applicationId }),
+        });
+        await loadApplications();
+      } catch (error) {
+        statusEl.style.color = 'var(--danger)';
+        statusEl.textContent = error.message || 'Action failed';
+      }
+    }
+
+    document.getElementById('logout-btn').addEventListener('click', logout);
+    document.getElementById('refresh-btn').addEventListener('click', loadApplications);
+    document.getElementById('status-filter').addEventListener('change', loadApplications);
+
+    rows.addEventListener('click', (event) => {
+      const btn = event.target.closest('button[data-action]');
+      if (!btn) return;
+      const appId = btn.getAttribute('data-id');
+      const action = btn.getAttribute('data-action');
+      updateStatus(appId, action);
+    });
+
+    loadApplications();
+  </script>
+</body>
+</html>
