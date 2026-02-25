@@ -1,5 +1,6 @@
 import { requireAdmin } from '../_auth.js';
 import { approveApplication } from '../_storage.js';
+import { sendApprovalEmail } from '../_email.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -17,6 +18,12 @@ export default async function handler(req, res) {
     if (result.error) {
       return res.status(400).json({ error: result.error });
     }
+
+    // Send approval email with access link (fire and forget)
+    sendApprovalEmail({
+      email: result.application.email,
+      memberToken: result.member.accessToken,
+    }).catch((err) => console.error('[email] approval email failed', err));
 
     return res.status(200).json({
       success: true,

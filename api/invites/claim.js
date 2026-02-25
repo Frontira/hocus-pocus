@@ -1,4 +1,5 @@
 import { claimInvite } from '../_storage.js';
+import { sendInviteClaimedNotice } from '../_email.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -13,6 +14,15 @@ export default async function handler(req, res) {
     const result = await claimInvite(inviteToken, { email, linkedin });
     if (result.error) {
       return res.status(400).json({ error: result.error });
+    }
+
+    // Notify inviter (fire and forget)
+    if (result.inviter) {
+      sendInviteClaimedNotice({
+        inviterEmail: result.inviter.email,
+        claimerEmail: email,
+        remaining: result.inviterRemaining,
+      }).catch((err) => console.error('[email] invite claimed notice failed', err));
     }
 
     return res.status(200).json({

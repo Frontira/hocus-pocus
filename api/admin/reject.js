@@ -1,5 +1,6 @@
 import { requireAdmin } from '../_auth.js';
 import { rejectApplication } from '../_storage.js';
+import { sendRejectionEmail } from '../_email.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -17,6 +18,11 @@ export default async function handler(req, res) {
     if (result.error) {
       return res.status(400).json({ error: result.error });
     }
+
+    // Send rejection email (fire and forget)
+    sendRejectionEmail({ email: result.application.email }).catch((err) =>
+      console.error('[email] rejection email failed', err)
+    );
 
     return res.status(200).json({ success: true, application: result.application });
   } catch (error) {

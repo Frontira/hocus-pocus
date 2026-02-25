@@ -352,7 +352,14 @@ async function claimInvite(inviteToken, payload) {
     memberToken: member.accessToken,
   });
 
-  return { member };
+  // Return inviter info for notification email
+  const members = await listMembers();
+  const inviter = members.find((m) => m.id === invite.memberId) || null;
+  const allInvites = await listInvites();
+  const inviterInvites = inviter ? allInvites.filter((i) => i.memberId === inviter.id) : [];
+  const inviterRemaining = inviter ? Math.max(0, 2 - inviterInvites.length) : 0;
+
+  return { member, inviter, inviterRemaining };
 }
 
 async function getInviteStats(memberToken) {

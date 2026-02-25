@@ -1,4 +1,5 @@
 import { createApplication, isSupabaseEnabled } from './_storage.js';
+import { sendNewApplicationNotice } from './_email.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -14,6 +15,11 @@ export default async function handler(req, res) {
     }
 
     const app = await createApplication({ email, linkedin, source: 'public' });
+
+    // Notify organizer (fire and forget)
+    sendNewApplicationNotice({ email, linkedin }).catch((err) =>
+      console.error('[email] new application notice failed', err)
+    );
 
     return res.status(200).json({
       success: true,
