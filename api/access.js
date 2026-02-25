@@ -30,6 +30,7 @@ export default async function handler(req, res) {
         remaining: stats.remaining,
         totalGenerated: stats.totalGenerated,
         limit: 2,
+        history: stats.history || [],
       },
     });
   } catch (error) {

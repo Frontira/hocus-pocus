@@ -268,7 +268,7 @@ async function findMemberByToken(memberToken) {
   return members.find((row) => row.accessToken === token) || null;
 }
 
-async function createInviteForMember(memberToken, origin) {
+async function createInviteForMember(memberToken, origin, { recipientEmail } = {}) {
   const member = await findMemberByToken(memberToken);
   if (!member) {
     return { error: 'Invalid member token' };
@@ -286,9 +286,11 @@ async function createInviteForMember(memberToken, origin) {
     token: newToken('invite'),
     memberId: member.id,
     createdAt: nowIso(),
-    expiresAt: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+    expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
     usedAt: null,
     claimedByMemberId: null,
+    recipientEmail: recipientEmail ? normalizeEmail(recipientEmail) : null,
+    method: recipientEmail ? 'email' : 'link',
   };
 
   let created;
@@ -372,10 +374,27 @@ async function getInviteStats(memberToken) {
   const mine = invites.filter((row) => row.memberId === member.id);
   const remaining = Math.max(0, 2 - mine.length);
 
+  const history = mine.map((inv) => {
+    let status = 'pending';
+    if (inv.usedAt) {
+      status = 'claimed';
+    } else if (inv.expiresAt && Date.parse(inv.expiresAt) < Date.now()) {
+      status = 'expired';
+    }
+    return {
+      method: inv.method || (inv.recipientEmail ? 'email' : 'link'),
+      recipientEmail: inv.recipientEmail || null,
+      status,
+      createdAt: inv.createdAt,
+      expiresAt: inv.expiresAt,
+    };
+  });
+
   return {
     member,
     remaining,
     totalGenerated: mine.length,
+    history,
   };
 }
 

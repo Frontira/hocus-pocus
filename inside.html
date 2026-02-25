@@ -282,7 +282,71 @@
 
     .hidden { display: none !important; }
 
-    #inside-view { display: grid; gap: 20px; }
+    #inside-view { display: grid; gap: 24px; }
+
+    /* ---- Invite history ---- */
+
+    .invite-history { margin-top: 14px; display: grid; gap: 8px; }
+
+    .invite-entry {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(74, 59, 45, 0.5);
+      font-size: 13px;
+    }
+
+    .invite-entry-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+    }
+
+    .invite-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .invite-badge.pending { background: rgba(240, 181, 111, 0.15); color: var(--signal); }
+    .invite-badge.claimed { background: rgba(132, 199, 181, 0.15); color: var(--accent); }
+    .invite-badge.expired { background: rgba(240, 124, 111, 0.15); color: var(--danger); }
+
+    /* ---- Invite tabs ---- */
+
+    .invite-tabs {
+      display: flex;
+      gap: 0;
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .invite-tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      background: transparent;
+      color: var(--muted);
+      border: 0;
+      border-radius: 0;
+      transition: background 160ms, color 160ms;
+    }
+
+    .invite-tab:hover { background: rgba(255, 255, 255, 0.03); transform: none; filter: none; }
+    .invite-tab.active { background: rgba(240, 181, 111, 0.12); color: var(--signal); }
+    .invite-tab:disabled { opacity: 0.4; cursor: not-allowed; }
 
     #status { color: var(--muted); min-height: 20px; font-size: 14px; }
     #status.error { color: var(--danger); }
@@ -499,14 +563,33 @@
       <article class="card">
         <p class="card-label">Your Invites</p>
         <h2>Bring someone worth talking to</h2>
-        <p>Each guest can invite up to 2 people. Enter their email and we'll send a personal invitation on your behalf. Invites expire after 24 hours.</p>
-        <p id="invite-count" style="margin-top: 10px; color: var(--text); font-weight: 500;">Loading invite status...</p>
-        <form id="invite-form" class="row" style="margin-top: 12px;">
-          <input id="invite-email" type="email" placeholder="Their email address" required />
-          <button id="create-invite-btn" type="submit">Send Invite</button>
-        </form>
+        <p>You have 2 invites. Send an email or generate a shareable link. Each invite can only be used once and expires after 24 hours.</p>
+        <p id="invite-count" style="margin-top: 10px; color: var(--text); font-weight: 500;">Loading...</p>
+
+        <!-- Invite history -->
+        <div id="invite-history" class="invite-history"></div>
+
+        <!-- Invite creation (hidden when all used) -->
+        <div id="invite-create">
+          <div class="invite-tabs">
+            <button class="invite-tab active" type="button" data-tab="email">Send Email</button>
+            <button class="invite-tab" type="button" data-tab="link">Get Link</button>
+          </div>
+
+          <!-- Email tab -->
+          <form id="invite-form-email" class="row" style="margin-top: 12px;">
+            <input id="invite-email" type="email" placeholder="Their email address" required />
+            <button type="submit">Send Invite</button>
+          </form>
+
+          <!-- Link tab -->
+          <div id="invite-form-link" style="margin-top: 12px; display: none;">
+            <button id="generate-link-btn" type="button" style="width: 100%;">Generate Invite Link</button>
+          </div>
+        </div>
+
         <div id="invite-link-wrap">
-          <p style="font-size: 13px; color: var(--signal); font-weight: 500;">Invitation sent. The link below is shown only once:</p>
+          <p style="font-size: 13px; color: var(--signal); font-weight: 500;">This link is shown only once:</p>
           <p id="invite-link" class="mono" style="margin-top: 6px; font-size: 13px;"></p>
           <p style="font-size: 12px; color: var(--muted); margin-top: 8px;">Copy it now if you want to share it another way. It won't be shown again.</p>
         </div>
@@ -535,9 +618,12 @@
     const claimBtn = document.getElementById('claim-btn');
 
     const inviteCountEl = document.getElementById('invite-count');
-    const inviteForm = document.getElementById('invite-form');
+    const inviteCreate = document.getElementById('invite-create');
+    const inviteFormEmail = document.getElementById('invite-form-email');
+    const inviteFormLink = document.getElementById('invite-form-link');
     const inviteEmailInput = document.getElementById('invite-email');
-    const createInviteBtn = document.getElementById('create-invite-btn');
+    const generateLinkBtn = document.getElementById('generate-link-btn');
+    const inviteHistory = document.getElementById('invite-history');
     const statusEl = document.getElementById('status');
     const inviteLinkWrap = document.getElementById('invite-link-wrap');
     const inviteLinkEl = document.getElementById('invite-link');
@@ -551,12 +637,40 @@
       view.classList.remove('hidden');
     }
 
-    function updateInviteUI(remaining) {
-      inviteCountEl.textContent = `Invites remaining: ${remaining} of 2`;
-      if (remaining <= 0) {
-        inviteForm.style.display = 'none';
-        inviteCountEl.textContent = 'All invites used';
-      }
+    // Tab switching
+    document.querySelectorAll('.invite-tab').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.invite-tab').forEach((t) => t.classList.remove('active'));
+        tab.classList.add('active');
+        const mode = tab.dataset.tab;
+        inviteFormEmail.style.display = mode === 'email' ? 'flex' : 'none';
+        inviteFormLink.style.display = mode === 'link' ? 'block' : 'none';
+      });
+    });
+
+    function renderHistory(history) {
+      inviteHistory.innerHTML = '';
+      if (!history || history.length === 0) return;
+      history.forEach((inv) => {
+        const entry = document.createElement('div');
+        entry.className = 'invite-entry';
+        const label = inv.method === 'email'
+          ? `Emailed to ${inv.recipientEmail}`
+          : 'Shared via link';
+        entry.innerHTML = `
+          <span class="invite-entry-left">${label}</span>
+          <span class="invite-badge ${inv.status}">${inv.status}</span>
+        `;
+        inviteHistory.appendChild(entry);
+      });
+    }
+
+    function updateInviteUI(remaining, history) {
+      inviteCountEl.textContent = remaining > 0
+        ? `${remaining} invite${remaining === 1 ? '' : 's'} remaining`
+        : 'All invites used';
+      inviteCreate.style.display = remaining > 0 ? 'block' : 'none';
+      if (history) renderHistory(history);
     }
 
     async function loadInside(token) {
@@ -570,51 +684,74 @@
         throw new Error(data.error || 'Access denied');
       }
 
-      updateInviteUI(data.invites.remaining);
+      updateInviteUI(data.invites.remaining, data.invites.history);
       activeMemberToken = token;
       show(insideView);
     }
 
-    inviteForm.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      if (!activeMemberToken) return;
-
-      const recipientEmail = inviteEmailInput.value.trim();
-      if (!recipientEmail) return;
-
+    async function createInvite(recipientEmail) {
       statusEl.className = '';
-      statusEl.textContent = 'Sending invitation...';
-      createInviteBtn.disabled = true;
+      statusEl.textContent = recipientEmail ? 'Sending invitation...' : 'Generating link...';
       inviteLinkWrap.style.display = 'none';
 
-      try {
-        const response = await fetch('/api/invites/create', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            memberToken: activeMemberToken,
-            recipientEmail,
-            origin: window.location.origin,
-          }),
-        });
+      const response = await fetch('/api/invites/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          memberToken: activeMemberToken,
+          recipientEmail: recipientEmail || undefined,
+          origin: window.location.origin,
+        }),
+      });
 
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-          throw new Error(data.error || 'Could not send invite');
-        }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || 'Could not create invite');
+      }
 
-        inviteLinkEl.textContent = data.inviteUrl;
-        inviteLinkWrap.style.display = 'block';
+      inviteLinkEl.textContent = data.inviteUrl;
+      inviteLinkWrap.style.display = 'block';
+
+      if (recipientEmail) {
         statusEl.className = 'ok';
         statusEl.textContent = `Invitation sent to ${recipientEmail}.`;
-        inviteEmailInput.value = '';
+      } else {
+        statusEl.className = 'ok';
+        statusEl.textContent = 'Link generated.';
+      }
 
-        updateInviteUI(data.remainingAfterCreate);
+      // Reload to update history and remaining count
+      await loadInside(activeMemberToken);
+    }
+
+    inviteFormEmail.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!activeMemberToken) return;
+      const email = inviteEmailInput.value.trim();
+      if (!email) return;
+      const btn = inviteFormEmail.querySelector('button');
+      btn.disabled = true;
+      try {
+        await createInvite(email);
+        inviteEmailInput.value = '';
       } catch (error) {
         statusEl.className = 'error';
-        statusEl.textContent = error.message || 'Failed to send invite';
+        statusEl.textContent = error.message;
       } finally {
-        createInviteBtn.disabled = false;
+        btn.disabled = false;
+      }
+    });
+
+    generateLinkBtn.addEventListener('click', async () => {
+      if (!activeMemberToken) return;
+      generateLinkBtn.disabled = true;
+      try {
+        await createInvite(null);
+      } catch (error) {
+        statusEl.className = 'error';
+        statusEl.textContent = error.message;
+      } finally {
+        generateLinkBtn.disabled = false;
       }
     });
 
