@@ -412,16 +412,69 @@
     </section>
 
     <!-- ============ CLAIM VIEW ============ -->
-    <section id="claim-view" class="card hidden">
-      <p class="eyebrow">You've Been Invited</p>
-      <h2>Confirm Your Seat</h2>
-      <p>Someone has personally invited you to Hocus Pocus. Enter your LinkedIn profile to claim your spot.</p>
-      <form id="claim-form" style="margin-top: 14px; display: grid; gap: 10px;">
-        <input id="claim-email" type="email" placeholder="Business Email" required />
-        <input id="claim-linkedin" type="url" placeholder="LinkedIn Profile (https://linkedin.com/in/...)" required />
-        <button id="claim-btn" type="submit">Confirm My Seat</button>
-      </form>
-      <p id="claim-status" style="margin-top: 8px; font-size: 14px;"></p>
+    <section id="claim-view" class="hidden" style="display:grid;gap:20px;">
+
+      <div class="header">
+        <p class="eyebrow">You've Been Invited</p>
+        <h1>Hocus Pocus</h1>
+        <p class="subtitle">No Wands. No BS. Just What Works.</p>
+        <div class="meta">
+          <span class="chip">Wednesday, March 25, 2026</span>
+          <span class="chip">6:00 PM</span>
+          <span class="chip">Vienna</span>
+          <span class="chip">Invite Only</span>
+        </div>
+      </div>
+
+      <article class="card">
+        <p class="card-label">The Event</p>
+        <h2>A closed-room conversation for leaders navigating real transformation</h2>
+        <p>An intimate, invite-only evening for decision-makers who are tired of buzzwords and ready for honest conversation about what actually works. No slides. No sponsors. No recording.</p>
+      </article>
+
+      <article class="card">
+        <p class="card-label">Your Hosts</p>
+        <div class="hosts">
+          <a class="host" href="https://www.linkedin.com/in/joannabakas/" target="_blank" rel="noreferrer">
+            <img src="Joanna.jpeg" alt="Joanna Bakas" loading="lazy" />
+            <div>
+              <p class="host-name">Joanna Bakas</p>
+              <p class="host-role">Managing Partner, frontira</p>
+            </div>
+          </a>
+          <a class="host" href="https://www.linkedin.com/in/thomas-pisar/" target="_blank" rel="noreferrer">
+            <img src="Thomas.jpeg" alt="Thomas Pisar" loading="lazy" />
+            <div>
+              <p class="host-name">Thomas Pisar</p>
+              <p class="host-role">Keynote Speaker for AI, Complexity & Leadership</p>
+            </div>
+          </a>
+        </div>
+      </article>
+
+      <article class="card">
+        <p class="card-label">The Location</p>
+        <h2>Ruby Paul Workspace</h2>
+        <p>A historic postal palace in Vienna's first district. Postgasse 8b, 1010 Vienna.</p>
+        <div class="gallery">
+          <img src="ruby-paul-1.webp" alt="Ruby Paul Workspace lounge" loading="lazy" />
+          <img src="ruby-paul-2.webp" alt="Ruby Paul Workspace bar area" loading="lazy" />
+          <img src="ruby-paul-3.webp" alt="Ruby Paul Workspace seating" loading="lazy" />
+        </div>
+      </article>
+
+      <article class="card">
+        <p class="card-label">Confirm Your Seat</p>
+        <h2>Accept your invitation</h2>
+        <p>Seats are extremely limited. Enter your details to confirm.</p>
+        <form id="claim-form" style="margin-top: 14px; display: grid; gap: 10px;">
+          <input id="claim-email" type="email" placeholder="Business Email" required />
+          <input id="claim-linkedin" type="url" placeholder="LinkedIn Profile (https://linkedin.com/in/...)" required />
+          <button id="claim-btn" type="submit">Confirm My Seat</button>
+        </form>
+        <p id="claim-status" style="margin-top: 8px; font-size: 14px;"></p>
+      </article>
+
     </section>
 
     <!-- ============ INSIDE VIEW ============ -->
