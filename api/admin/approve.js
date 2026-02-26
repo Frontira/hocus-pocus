@@ -1,6 +1,7 @@
 import { requireAdmin } from '../_auth.js';
-import { approveApplication } from '../_storage.js';
+import { approveApplication, updateMember } from '../_storage.js';
 import { sendApprovalEmail } from '../_email.js';
+import { scrapeLinkedInName } from '../_linkedin.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -24,6 +25,13 @@ export default async function handler(req, res) {
       email: result.application.email,
       memberToken: result.member.accessToken,
     }).catch((err) => console.error('[email] approval email failed', err));
+
+    // Enrich member name from LinkedIn (fire and forget)
+    if (result.member.linkedin && !result.member.name) {
+      scrapeLinkedInName(result.member.linkedin)
+        .then((name) => name && updateMember(result.member.id, { name }))
+        .catch((err) => console.error('[linkedin] enrich failed', err));
+    }
 
     return res.status(200).json({
       success: true,

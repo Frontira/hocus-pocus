@@ -94,7 +94,9 @@
 
     .tag.pending { color: var(--warn); }
     .tag.approved { color: var(--ok); }
+    .tag.claimed { color: var(--ok); }
     .tag.rejected { color: var(--danger); }
+    .tag.expired { color: var(--danger); }
 
     #status { min-height: 18px; margin-top: 8px; }
   </style>
@@ -108,6 +110,33 @@
         <button id="logout-btn">Logout</button>
       </div>
       <p id="status"></p>
+    </section>
+
+    <section class="card">
+      <h1 style="font-size:16px;">Send Proactive Invite</h1>
+      <p>Invite someone directly on behalf of a team member.</p>
+      <div class="row">
+        <input id="invite-email" type="email" placeholder="Recipient email" />
+        <select id="invite-persona">
+          <option value="joanna">Joanna Bakas</option>
+          <option value="thomas">Thomas Pisar</option>
+          <option value="stefan">Stefan Erschwendner</option>
+        </select>
+        <button id="send-invite-btn">Send Invite</button>
+      </div>
+      <p id="invite-status"></p>
+
+      <table id="invite-table" style="display:none;">
+        <thead>
+          <tr>
+            <th>Sent</th>
+            <th>Recipient</th>
+            <th>Sender</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="invite-rows"></tbody>
+      </table>
     </section>
 
     <section class="card">
@@ -248,7 +277,71 @@
       updateStatus(appId, action);
     });
 
+    // ── Proactive Invites ──────────────────────────────────────
+
+    const inviteStatusEl = document.getElementById('invite-status');
+    const inviteRows = document.getElementById('invite-rows');
+    const inviteTable = document.getElementById('invite-table');
+
+    async function sendAdminInvite() {
+      const email = document.getElementById('invite-email').value.trim();
+      const persona = document.getElementById('invite-persona').value;
+      if (!email) {
+        inviteStatusEl.style.color = 'var(--danger)';
+        inviteStatusEl.textContent = 'Enter a recipient email';
+        return;
+      }
+
+      inviteStatusEl.style.color = 'var(--muted)';
+      inviteStatusEl.textContent = 'Sending...';
+
+      try {
+        const data = await api('/api/admin/invite', {
+          method: 'POST',
+          body: JSON.stringify({
+            recipientEmail: email,
+            senderPersona: persona,
+            origin: window.location.origin,
+          }),
+        });
+        inviteStatusEl.style.color = 'var(--ok)';
+        inviteStatusEl.textContent = `Invite sent to ${email} as ${data.senderName}`;
+        document.getElementById('invite-email').value = '';
+        loadAdminInvites();
+      } catch (error) {
+        inviteStatusEl.style.color = 'var(--danger)';
+        inviteStatusEl.textContent = error.message || 'Failed to send invite';
+      }
+    }
+
+    async function loadAdminInvites() {
+      try {
+        const data = await api('/api/admin/invites');
+        inviteRows.innerHTML = '';
+        if (data.invites.length === 0) {
+          inviteTable.style.display = 'none';
+          return;
+        }
+        inviteTable.style.display = '';
+        data.invites.forEach((inv) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${formatDate(inv.createdAt)}</td>
+            <td>${inv.recipientEmail}</td>
+            <td>${inv.senderName}</td>
+            <td><span class="tag ${inv.status}">${inv.status}</span></td>
+          `;
+          inviteRows.appendChild(tr);
+        });
+      } catch {
+        // silent fail
+      }
+    }
+
+    document.getElementById('send-invite-btn').addEventListener('click', sendAdminInvite);
+
     loadApplications();
+    loadAdminInvites();
   </script>
 </body>
 </html>

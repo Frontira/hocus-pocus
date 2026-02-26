@@ -14,6 +14,12 @@ const EVENT_DETAILS = {
   scarcityLabel: 'Invite-only | Limited seats',
 };
 
+const ADMIN_PERSONAS = {
+  joanna: { name: 'Joanna Bakas', email: 'jb@frontira.io' },
+  thomas: { name: 'Thomas Pisar', email: 'tp@frontira.io' },
+  stefan: { name: 'Stefan Erschwendner', email: 'se@frontira.io' },
+};
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -29,6 +35,22 @@ function cleanString(value) {
 function nullable(value) {
   const v = cleanString(value);
   return v || null;
+}
+
+function extractNameFromLinkedIn(url) {
+  try {
+    const parsed = new URL(url.startsWith('http') ? url : `https://${url}`);
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    const slug = parts.find((_, i) => parts[i - 1] === 'in') || parts[parts.length - 1];
+    if (!slug) return null;
+    // Remove trailing LinkedIn ID suffix (e.g., "-a1b2c3d4e5")
+    const cleaned = slug.replace(/-[a-f0-9]{6,}$/i, '');
+    const words = cleaned.split('-').filter(Boolean);
+    if (words.length === 0) return null;
+    return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  } catch {
+    return null;
+  }
 }
 
 function newToken(prefix) {
@@ -122,6 +144,17 @@ async function supabaseUpdateById(tableName, id, fields) {
   return Array.isArray(data) ? data[0] : null;
 }
 
+async function updateMember(memberId, fields) {
+  if (!isSupabaseEnabled()) {
+    const db = ensureMemoryDb();
+    const index = db.members.findIndex((m) => m.id === memberId);
+    if (index === -1) return null;
+    db.members[index] = { ...db.members[index], ...fields };
+    return db.members[index];
+  }
+  return supabaseUpdateById(MEMBERS_TABLE, memberId, fields);
+}
+
 async function listApplications() {
   if (!isSupabaseEnabled()) {
     return ensureMemoryDb().applications.slice();
@@ -169,7 +202,9 @@ async function createApplication(input) {
 }
 
 async function createMember(input) {
+  const linkedinName = input.linkedin ? extractNameFromLinkedIn(input.linkedin) : null;
   const record = {
+    name: cleanString(input.name) || linkedinName || null,
     email: normalizeEmail(input.email),
     linkedin: cleanString(input.linkedin),
     accessToken: input.accessToken || newToken('member'),
@@ -312,6 +347,62 @@ async function createInviteForMember(memberToken, origin, { recipientEmail } = {
   };
 }
 
+async function createAdminInvite(origin, { recipientEmail, senderPersona }) {
+  const persona = ADMIN_PERSONAS[senderPersona];
+  if (!persona) return { error: 'Invalid sender persona' };
+  if (!recipientEmail) return { error: 'Recipient email is required' };
+
+  const inviteRecord = {
+    token: newToken('invite'),
+    memberId: null,
+    createdAt: nowIso(),
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+    usedAt: null,
+    claimedByMemberId: null,
+    recipientEmail: normalizeEmail(recipientEmail),
+    method: 'admin',
+    senderPersona,
+  };
+
+  let created;
+  if (!isSupabaseEnabled()) {
+    const db = ensureMemoryDb();
+    created = { id: newToken('inv'), ...inviteRecord };
+    db.invites.push(created);
+  } else {
+    created = await supabaseCreate(INVITES_TABLE, inviteRecord);
+  }
+
+  const base = String(origin || '').replace(/\/$/, '');
+  const inviteUrl = `${base}/inside.html?invite=${encodeURIComponent(created.token)}`;
+
+  return { invite: created, inviteUrl, persona };
+}
+
+async function listAdminInvites() {
+  const invites = await listInvites();
+  return invites
+    .filter((inv) => inv.method === 'admin')
+    .map((inv) => {
+      let status = 'pending';
+      if (inv.usedAt) {
+        status = 'claimed';
+      } else if (inv.expiresAt && Date.parse(inv.expiresAt) < Date.now()) {
+        status = 'expired';
+      }
+      return {
+        id: inv.id,
+        recipientEmail: inv.recipientEmail,
+        senderPersona: inv.senderPersona,
+        senderName: ADMIN_PERSONAS[inv.senderPersona]?.name || inv.senderPersona,
+        status,
+        createdAt: inv.createdAt,
+        expiresAt: inv.expiresAt,
+        usedAt: inv.usedAt,
+      };
+    });
+}
+
 async function claimInvite(inviteToken, payload) {
   const token = cleanString(inviteToken);
   const email = normalizeEmail(payload.email);
@@ -355,13 +446,19 @@ async function claimInvite(inviteToken, payload) {
   });
 
   // Return inviter info for notification email
-  const members = await listMembers();
-  const inviter = members.find((m) => m.id === invite.memberId) || null;
-  const allInvites = await listInvites();
-  const inviterInvites = inviter ? allInvites.filter((i) => i.memberId === inviter.id) : [];
-  const inviterRemaining = inviter ? Math.max(0, 2 - inviterInvites.length) : 0;
+  let inviter = null;
+  let inviterRemaining = 0;
+  const senderPersona = invite.senderPersona || null;
 
-  return { member, inviter, inviterRemaining };
+  if (invite.memberId) {
+    const members = await listMembers();
+    inviter = members.find((m) => m.id === invite.memberId) || null;
+    const allInvites = await listInvites();
+    const inviterInvites = inviter ? allInvites.filter((i) => i.memberId === inviter.id) : [];
+    inviterRemaining = inviter ? Math.max(0, 2 - inviterInvites.length) : 0;
+  }
+
+  return { member, inviter, inviterRemaining, senderPersona };
 }
 
 async function getInviteStats(memberToken) {
@@ -400,12 +497,16 @@ async function getInviteStats(memberToken) {
 
 export {
   EVENT_DETAILS,
+  ADMIN_PERSONAS,
   createApplication,
   listApplications,
   approveApplication,
   rejectApplication,
   findMemberByToken,
+  updateMember,
   createInviteForMember,
+  createAdminInvite,
+  listAdminInvites,
   claimInvite,
   getInviteStats,
   isSupabaseEnabled,

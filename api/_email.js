@@ -144,15 +144,19 @@ async function sendRejectionEmail({ email }) {
   return send({ to: email, subject: 'Hocus Pocus - Application Update', html });
 }
 
-/** Send invite email to a guest on behalf of an existing member */
-async function sendInviteEmail({ recipientEmail, inviterEmail, inviteUrl, expiresAt }) {
+/** Send invite email to a guest on behalf of an existing member or admin persona */
+async function sendInviteEmail({ recipientEmail, inviterEmail, inviterName, inviteUrl, expiresAt }) {
   const expiry = new Date(expiresAt).toLocaleString('en-GB', {
     weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
   });
 
+  const inviterLabel = inviterName
+    ? `${inviterName} / ${inviterEmail}`
+    : inviterEmail;
+
   const html = wrap([
     heading("You've Been Invited"),
-    paragraph(`<strong style="color:#f8f2e9;">${inviterEmail}</strong> has personally invited you to Hocus Pocus - an intimate, invite-only conversation for leaders in Vienna.`),
+    paragraph(`<strong style="color:#f8f2e9;">${inviterLabel}</strong> has personally invited you to Hocus Pocus - an intimate, invite-only conversation for leaders in Vienna.`),
     `<div style="background:#1a1610;border:1px solid #2a2218;border-radius:10px;padding:16px;margin:16px 0;">`,
     detail('Date', 'Wednesday, March 25, 2026'),
     detail('Time', '6:00 PM'),

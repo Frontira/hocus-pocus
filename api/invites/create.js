@@ -28,6 +28,7 @@ export default async function handler(req, res) {
       sendInviteEmail({
         recipientEmail,
         inviterEmail: member?.email || 'a guest',
+        inviterName: member?.name || null,
         inviteUrl: result.inviteUrl,
         expiresAt: result.invite.expiresAt,
       }).catch((err) => console.error('[email] invite email failed', err));
