@@ -92,7 +92,9 @@
       border: 1px solid var(--line);
     }
 
+    .tag.draft { color: var(--muted); }
     .tag.pending { color: var(--warn); }
+    .tag.invited { color: var(--warn); }
     .tag.approved { color: var(--ok); }
     .tag.claimed { color: var(--ok); }
     .tag.rejected { color: var(--danger); }
@@ -113,29 +115,31 @@
     </section>
 
     <section class="card">
-      <h1 style="font-size:16px;">Send Proactive Invite</h1>
-      <p>Invite someone directly on behalf of a team member.</p>
+      <h1 style="font-size:16px;">Guest List</h1>
+      <p>Manage proactive invites. Add people, then send invites on behalf of a team member.</p>
       <div class="row">
-        <input id="invite-email" type="email" placeholder="Recipient email" />
-        <select id="invite-persona">
+        <input id="gl-email" type="email" placeholder="Email" />
+        <input id="gl-linkedin" type="url" placeholder="LinkedIn URL" />
+        <select id="gl-persona">
           <option value="joanna">Joanna Bakas</option>
           <option value="thomas">Thomas Pisar</option>
           <option value="stefan">Stefan Erschwendner</option>
         </select>
-        <button id="send-invite-btn">Send Invite</button>
+        <button id="gl-add-btn">Add</button>
       </div>
-      <p id="invite-status"></p>
+      <p id="gl-status"></p>
 
-      <table id="invite-table" style="display:none;">
+      <table id="gl-table" style="display:none;">
         <thead>
           <tr>
-            <th>Sent</th>
-            <th>Recipient</th>
+            <th>Email</th>
+            <th>LinkedIn</th>
             <th>Sender</th>
             <th>Status</th>
+            <th>Action</th>
           </tr>
         </thead>
-        <tbody id="invite-rows"></tbody>
+        <tbody id="gl-rows"></tbody>
       </table>
     </section>
 
@@ -277,71 +281,130 @@
       updateStatus(appId, action);
     });
 
-    // ── Proactive Invites ──────────────────────────────────────
+    // ── Guest List ─────────────────────────────────────────────
 
-    const inviteStatusEl = document.getElementById('invite-status');
-    const inviteRows = document.getElementById('invite-rows');
-    const inviteTable = document.getElementById('invite-table');
+    const glStatusEl = document.getElementById('gl-status');
+    const glRows = document.getElementById('gl-rows');
+    const glTable = document.getElementById('gl-table');
 
-    async function sendAdminInvite() {
-      const email = document.getElementById('invite-email').value.trim();
-      const persona = document.getElementById('invite-persona').value;
+    async function addToGuestList() {
+      const email = document.getElementById('gl-email').value.trim();
+      const linkedin = document.getElementById('gl-linkedin').value.trim();
+      const persona = document.getElementById('gl-persona').value;
       if (!email) {
-        inviteStatusEl.style.color = 'var(--danger)';
-        inviteStatusEl.textContent = 'Enter a recipient email';
+        glStatusEl.style.color = 'var(--danger)';
+        glStatusEl.textContent = 'Email is required';
         return;
       }
 
-      inviteStatusEl.style.color = 'var(--muted)';
-      inviteStatusEl.textContent = 'Sending...';
+      try {
+        await api('/api/admin/guestlist', {
+          method: 'POST',
+          body: JSON.stringify({ email, linkedin, senderPersona: persona }),
+        });
+        document.getElementById('gl-email').value = '';
+        document.getElementById('gl-linkedin').value = '';
+        glStatusEl.style.color = 'var(--ok)';
+        glStatusEl.textContent = `Added ${email}`;
+        loadGuestList();
+      } catch (error) {
+        glStatusEl.style.color = 'var(--danger)';
+        glStatusEl.textContent = error.message || 'Failed to add';
+      }
+    }
 
+    async function sendGuestInvite(id, email, persona) {
+      glStatusEl.style.color = 'var(--muted)';
+      glStatusEl.textContent = `Sending invite to ${email}...`;
       try {
         const data = await api('/api/admin/invite', {
           method: 'POST',
           body: JSON.stringify({
             recipientEmail: email,
             senderPersona: persona,
+            guestlistId: id,
             origin: window.location.origin,
           }),
         });
-        inviteStatusEl.style.color = 'var(--ok)';
-        inviteStatusEl.textContent = `Invite sent to ${email} as ${data.senderName}`;
-        document.getElementById('invite-email').value = '';
-        loadAdminInvites();
+        glStatusEl.style.color = 'var(--ok)';
+        glStatusEl.textContent = `Invite sent to ${email} as ${data.senderName}`;
+        loadGuestList();
       } catch (error) {
-        inviteStatusEl.style.color = 'var(--danger)';
-        inviteStatusEl.textContent = error.message || 'Failed to send invite';
+        glStatusEl.style.color = 'var(--danger)';
+        glStatusEl.textContent = error.message || 'Failed to send invite';
       }
     }
 
-    async function loadAdminInvites() {
+    async function deleteGuestEntry(id) {
       try {
-        const data = await api('/api/admin/invites');
-        inviteRows.innerHTML = '';
-        if (data.invites.length === 0) {
-          inviteTable.style.display = 'none';
+        await api('/api/admin/guestlist', {
+          method: 'DELETE',
+          body: JSON.stringify({ id }),
+        });
+        loadGuestList();
+      } catch (error) {
+        glStatusEl.style.color = 'var(--danger)';
+        glStatusEl.textContent = error.message || 'Failed to delete';
+      }
+    }
+
+    function glRowHtml(entry) {
+      const linkedinShort = entry.linkedin
+        ? `<a href="${entry.linkedin}" target="_blank" rel="noreferrer" style="color:var(--muted);">${entry.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, '').replace(/\/$/, '')}</a>`
+        : '-';
+
+      let actions = '';
+      if (entry.status === 'draft') {
+        actions = `
+          <button data-send="${entry.id}" data-email="${entry.email}" data-persona="${entry.senderPersona}" style="font-size:12px;">Send</button>
+          <button data-del="${entry.id}" class="reject" style="font-size:12px;">Delete</button>
+        `;
+      }
+
+      return `
+        <td>${entry.email}</td>
+        <td>${linkedinShort}</td>
+        <td>${entry.senderName || entry.senderPersona}</td>
+        <td><span class="tag ${entry.status}">${entry.status}</span></td>
+        <td><div class="row" style="margin-top:0;">${actions}</div></td>
+      `;
+    }
+
+    async function loadGuestList() {
+      try {
+        const data = await api('/api/admin/guestlist');
+        glRows.innerHTML = '';
+        if (data.guestlist.length === 0) {
+          glTable.style.display = 'none';
           return;
         }
-        inviteTable.style.display = '';
-        data.invites.forEach((inv) => {
+        glTable.style.display = '';
+        data.guestlist.forEach((entry) => {
           const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td>${formatDate(inv.createdAt)}</td>
-            <td>${inv.recipientEmail}</td>
-            <td>${inv.senderName}</td>
-            <td><span class="tag ${inv.status}">${inv.status}</span></td>
-          `;
-          inviteRows.appendChild(tr);
+          tr.innerHTML = glRowHtml(entry);
+          glRows.appendChild(tr);
         });
       } catch {
         // silent fail
       }
     }
 
-    document.getElementById('send-invite-btn').addEventListener('click', sendAdminInvite);
+    document.getElementById('gl-add-btn').addEventListener('click', addToGuestList);
+
+    glRows.addEventListener('click', (event) => {
+      const sendBtn = event.target.closest('[data-send]');
+      if (sendBtn) {
+        sendGuestInvite(sendBtn.dataset.send, sendBtn.dataset.email, sendBtn.dataset.persona);
+        return;
+      }
+      const delBtn = event.target.closest('[data-del]');
+      if (delBtn) {
+        deleteGuestEntry(delBtn.dataset.del);
+      }
+    });
 
     loadApplications();
-    loadAdminInvites();
+    loadGuestList();
   </script>
 </body>
 </html>

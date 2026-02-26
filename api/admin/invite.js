@@ -1,5 +1,5 @@
 import { requireAdmin } from '../_auth.js';
-import { createAdminInvite } from '../_storage.js';
+import { createAdminInvite, updateGuestlistEntry } from '../_storage.js';
 import { sendInviteEmail } from '../_email.js';
 
 export default async function handler(req, res) {
@@ -12,6 +12,7 @@ export default async function handler(req, res) {
   try {
     const recipientEmail = String(req.body?.recipientEmail || '').trim();
     const senderPersona = String(req.body?.senderPersona || '').trim();
+    const guestlistId = String(req.body?.guestlistId || '').trim() || null;
     const origin = String(req.body?.origin || req.headers.origin || '').trim();
 
     if (!recipientEmail) {
@@ -24,6 +25,15 @@ export default async function handler(req, res) {
     const result = await createAdminInvite(origin, { recipientEmail, senderPersona });
     if (result.error) {
       return res.status(400).json({ error: result.error });
+    }
+
+    // Link invite to guestlist entry
+    if (guestlistId) {
+      updateGuestlistEntry(guestlistId, {
+        status: 'invited',
+        sentAt: new Date().toISOString(),
+        inviteId: result.invite.id,
+      }).catch((err) => console.error('[guestlist] update failed', err));
     }
 
     // Send invite email as the chosen persona (fire and forget)

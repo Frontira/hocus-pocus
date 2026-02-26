@@ -1,6 +1,7 @@
 const APPLICATIONS_TABLE = process.env.SUPABASE_APPLICATIONS_TABLE || 'applications';
 const MEMBERS_TABLE = process.env.SUPABASE_MEMBERS_TABLE || 'members';
 const INVITES_TABLE = process.env.SUPABASE_INVITES_TABLE || 'invites';
+const GUESTLIST_TABLE = process.env.SUPABASE_GUESTLIST_TABLE || 'guestlist';
 
 const SUPABASE_URL = String(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
 const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
@@ -142,6 +143,13 @@ async function supabaseUpdateById(tableName, id, fields) {
     }
   );
   return Array.isArray(data) ? data[0] : null;
+}
+
+async function supabaseDeleteById(tableName, id) {
+  await supabaseRequest(
+    toTablePath(tableName, { id: `eq.${id}` }),
+    { method: 'DELETE' }
+  );
 }
 
 async function updateMember(memberId, fields) {
@@ -458,7 +466,7 @@ async function claimInvite(inviteToken, payload) {
     inviterRemaining = inviter ? Math.max(0, 2 - inviterInvites.length) : 0;
   }
 
-  return { member, inviter, inviterRemaining, senderPersona };
+  return { member, inviter, inviterRemaining, senderPersona, inviteId: invite.id };
 }
 
 async function getInviteStats(memberToken) {
@@ -495,6 +503,65 @@ async function getInviteStats(memberToken) {
   };
 }
 
+// ── Guest List ─────────────────────────────────────────────
+
+async function listGuestlist() {
+  if (!isSupabaseEnabled()) {
+    return (ensureMemoryDb().guestlist || []).slice();
+  }
+  return supabaseListAll(GUESTLIST_TABLE);
+}
+
+async function addToGuestlist({ email, linkedin, senderPersona }) {
+  const record = {
+    email: normalizeEmail(email),
+    linkedin: cleanString(linkedin),
+    senderPersona: cleanString(senderPersona) || 'joanna',
+    status: 'draft',
+    createdAt: nowIso(),
+    sentAt: null,
+    inviteId: null,
+  };
+
+  if (!isSupabaseEnabled()) {
+    const db = ensureMemoryDb();
+    if (!db.guestlist) db.guestlist = [];
+    const created = { id: newToken('gl'), ...record };
+    db.guestlist.push(created);
+    return created;
+  }
+
+  return supabaseCreate(GUESTLIST_TABLE, record);
+}
+
+async function updateGuestlistEntry(id, fields) {
+  if (!isSupabaseEnabled()) {
+    const db = ensureMemoryDb();
+    if (!db.guestlist) db.guestlist = [];
+    const index = db.guestlist.findIndex((g) => String(g.id) === String(id));
+    if (index === -1) return null;
+    db.guestlist[index] = { ...db.guestlist[index], ...fields };
+    return db.guestlist[index];
+  }
+  return supabaseUpdateById(GUESTLIST_TABLE, id, fields);
+}
+
+async function deleteFromGuestlist(id) {
+  if (!isSupabaseEnabled()) {
+    const db = ensureMemoryDb();
+    if (!db.guestlist) db.guestlist = [];
+    db.guestlist = db.guestlist.filter((g) => String(g.id) !== String(id));
+    return true;
+  }
+  await supabaseDeleteById(GUESTLIST_TABLE, id);
+  return true;
+}
+
+async function findGuestlistByInviteId(inviteId) {
+  const list = await listGuestlist();
+  return list.find((g) => String(g.inviteId) === String(inviteId)) || null;
+}
+
 export {
   EVENT_DETAILS,
   ADMIN_PERSONAS,
@@ -509,6 +576,11 @@ export {
   listAdminInvites,
   claimInvite,
   getInviteStats,
+  listGuestlist,
+  addToGuestlist,
+  updateGuestlistEntry,
+  deleteFromGuestlist,
+  findGuestlistByInviteId,
   isSupabaseEnabled,
   isAirtableEnabled,
 };

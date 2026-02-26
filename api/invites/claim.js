@@ -1,4 +1,4 @@
-import { claimInvite, updateMember, ADMIN_PERSONAS } from '../_storage.js';
+import { claimInvite, updateMember, findGuestlistByInviteId, updateGuestlistEntry, ADMIN_PERSONAS } from '../_storage.js';
 import { sendApprovalEmail, sendInviteClaimedNotice } from '../_email.js';
 import { scrapeLinkedInName } from '../_linkedin.js';
 
@@ -40,6 +40,13 @@ export default async function handler(req, res) {
           remaining: -1,
         }).catch((err) => console.error('[email] admin invite claimed notice failed', err));
       }
+    }
+
+    // Update guestlist entry if this was an admin invite (fire and forget)
+    if (result.inviteId) {
+      findGuestlistByInviteId(result.inviteId)
+        .then((entry) => entry && updateGuestlistEntry(entry.id, { status: 'claimed' }))
+        .catch((err) => console.error('[guestlist] claim update failed', err));
     }
 
     // Enrich member name from LinkedIn (fire and forget)
