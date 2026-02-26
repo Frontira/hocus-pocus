@@ -17,24 +17,23 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: result.error });
     }
 
-    // Send "You're in" email to the new member (fire and forget)
-    sendApprovalEmail({
+    // Send "You're in" email to the new member
+    await sendApprovalEmail({
       email,
       memberToken: result.member.accessToken,
     }).catch((err) => console.error('[email] claim approval email failed', err));
 
-    // Notify inviter (fire and forget)
+    // Notify inviter
     if (result.inviter) {
-      sendInviteClaimedNotice({
+      await sendInviteClaimedNotice({
         inviterEmail: result.inviter.email,
         claimerEmail: email,
         remaining: result.inviterRemaining,
       }).catch((err) => console.error('[email] invite claimed notice failed', err));
     } else if (result.senderPersona) {
-      // Admin invite - notify the persona
       const persona = ADMIN_PERSONAS[result.senderPersona];
       if (persona) {
-        sendInviteClaimedNotice({
+        await sendInviteClaimedNotice({
           inviterEmail: persona.email,
           claimerEmail: email,
           remaining: -1,
@@ -42,14 +41,13 @@ export default async function handler(req, res) {
       }
     }
 
-    // Update guestlist entry if this was an admin invite (fire and forget)
+    // Update guestlist entry if this was an admin invite
     if (result.inviteId) {
-      findGuestlistByInviteId(result.inviteId)
-        .then((entry) => entry && updateGuestlistEntry(entry.id, { status: 'claimed' }))
-        .catch((err) => console.error('[guestlist] claim update failed', err));
+      const entry = await findGuestlistByInviteId(result.inviteId).catch(() => null);
+      if (entry) await updateGuestlistEntry(entry.id, { status: 'claimed' }).catch(() => {});
     }
 
-    // Enrich member name from LinkedIn (fire and forget)
+    // Enrich member name from LinkedIn (fire and forget - ok if this doesn't complete)
     if (linkedin && !result.member.name) {
       scrapeLinkedInName(linkedin)
         .then((name) => name && updateMember(result.member.id, { name }))

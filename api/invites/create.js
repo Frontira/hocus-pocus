@@ -23,9 +23,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: result.error });
     }
 
-    // Send invite email if recipient provided (fire and forget)
+    // Send invite email if recipient provided
     if (recipientEmail) {
-      sendInviteEmail({
+      await sendInviteEmail({
         recipientEmail,
         inviterEmail: member?.email || 'a guest',
         inviterName: member?.name || null,

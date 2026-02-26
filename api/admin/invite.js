@@ -29,15 +29,15 @@ export default async function handler(req, res) {
 
     // Link invite to guestlist entry
     if (guestlistId) {
-      updateGuestlistEntry(guestlistId, {
+      await updateGuestlistEntry(guestlistId, {
         status: 'invited',
         sentAt: new Date().toISOString(),
         inviteId: result.invite.id,
       }).catch((err) => console.error('[guestlist] update failed', err));
     }
 
-    // Send invite email as the chosen persona (fire and forget)
-    sendInviteEmail({
+    // Send invite email as the chosen persona (await to ensure delivery)
+    await sendInviteEmail({
       recipientEmail,
       inviterEmail: result.persona.email,
       inviterName: result.persona.name,

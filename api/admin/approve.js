@@ -20,8 +20,8 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: result.error });
     }
 
-    // Send approval email with access link (fire and forget)
-    sendApprovalEmail({
+    // Send approval email with access link
+    await sendApprovalEmail({
       email: result.application.email,
       memberToken: result.member.accessToken,
     }).catch((err) => console.error('[email] approval email failed', err));
