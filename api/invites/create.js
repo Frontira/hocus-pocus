@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       }).catch((err) => console.error('[email] invite email failed', err));
     }
 
-    notifyInviteCreated({
+    await notifyInviteCreated({
       inviterEmail: member?.email,
       inviterName: member?.name,
       recipientEmail,

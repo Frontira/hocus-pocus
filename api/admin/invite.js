@@ -46,7 +46,7 @@ export default async function handler(req, res) {
       expiresAt: result.invite.expiresAt,
     }).catch((err) => console.error('[email] admin invite email failed', err));
 
-    notifyAdminInviteSent({
+    await notifyAdminInviteSent({
       recipientEmail,
       senderName: result.persona.name,
     }).catch((err) => console.error('[discord] admin invite notice failed', err));

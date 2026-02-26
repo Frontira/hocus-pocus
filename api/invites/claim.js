@@ -42,7 +42,7 @@ export default async function handler(req, res) {
       }
     }
 
-    notifyInviteClaimed({ email, linkedin }).catch((err) =>
+    await notifyInviteClaimed({ email, linkedin }).catch((err) =>
       console.error('[discord] invite claimed notice failed', err)
     );
 
