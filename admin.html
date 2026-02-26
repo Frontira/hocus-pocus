@@ -353,13 +353,13 @@
         ? `<a href="${entry.linkedin}" target="_blank" rel="noreferrer" style="color:var(--muted);">${entry.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, '').replace(/\/$/, '')}</a>`
         : '-';
 
-      let actions = '';
-      if (entry.status === 'draft') {
-        actions = `
-          <button data-send="${entry.id}" data-email="${entry.email}" data-persona="${entry.senderPersona}" style="font-size:12px;">Send</button>
-          <button data-del="${entry.id}" class="reject" style="font-size:12px;">Delete</button>
-        `;
-      }
+      const sendBtn = entry.status === 'draft'
+        ? `<button data-send="${entry.id}" data-email="${entry.email}" data-persona="${entry.senderPersona}" style="font-size:12px;">Send</button>`
+        : '';
+      const actions = `
+        ${sendBtn}
+        <button data-del="${entry.id}" class="reject" style="font-size:12px;">Delete</button>
+      `;
 
       return `
         <td>${entry.email}</td>
