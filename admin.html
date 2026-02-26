@@ -211,6 +211,7 @@
           <div class="row" style="margin-top:0;">
             ${app.status === 'pending' ? `<button class="approve" data-id="${app.id}" data-action="approve">Approve</button>` : ''}
             ${app.status === 'pending' ? `<button class="reject" data-id="${app.id}" data-action="reject">Reject</button>` : ''}
+            <button class="reject" data-id="${app.id}" data-action="delete" style="font-size:12px;">Delete</button>
           </div>
           ${accessLink ? `<div class="mono" style="margin-top:6px;">${accessLink}</div>` : ''}
         </td>
@@ -255,8 +256,9 @@
     }
 
     async function updateStatus(applicationId, action) {
+      const labels = { approve: 'Approving', reject: 'Rejecting', delete: 'Deleting' };
       statusEl.style.color = 'var(--muted)';
-      statusEl.textContent = `${action === 'approve' ? 'Approving' : 'Rejecting'}...`;
+      statusEl.textContent = `${labels[action] || action}...`;
       try {
         await api(`/api/admin/${action}`, {
           method: 'POST',

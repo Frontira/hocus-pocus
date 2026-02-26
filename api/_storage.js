@@ -152,6 +152,16 @@ async function supabaseDeleteById(tableName, id) {
   );
 }
 
+async function deleteApplication(id) {
+  if (!isSupabaseEnabled()) {
+    const db = ensureMemoryDb();
+    db.applications = db.applications.filter((a) => String(a.id) !== String(id));
+    return true;
+  }
+  await supabaseDeleteById(APPLICATIONS_TABLE, id);
+  return true;
+}
+
 async function updateMember(memberId, fields) {
   if (!isSupabaseEnabled()) {
     const db = ensureMemoryDb();
@@ -569,6 +579,7 @@ export {
   listApplications,
   approveApplication,
   rejectApplication,
+  deleteApplication,
   findMemberByToken,
   updateMember,
   createInviteForMember,
