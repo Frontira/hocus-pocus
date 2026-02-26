@@ -1,3 +1,7 @@
+export const config = {
+  matcher: ['/admin.html', '/admin-login.html'],
+};
+
 const ADMIN_COOKIE_NAME = 'hp_admin_session';
 
 function parseCookies(header) {
@@ -31,10 +35,6 @@ async function expectedSessionToken() {
 export default async function middleware(request) {
   const url = new URL(request.url);
   const pathname = url.pathname;
-
-  if (pathname !== '/admin.html' && pathname !== '/admin-login.html') {
-    return;
-  }
 
   const expected = await expectedSessionToken();
   if (!expected) {
