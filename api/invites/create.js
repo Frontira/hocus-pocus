@@ -1,5 +1,6 @@
 import { createInviteForMember, findMemberByToken } from '../_storage.js';
 import { sendInviteEmail } from '../_email.js';
+import { notifyInviteCreated } from '../_discord.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -33,6 +34,13 @@ export default async function handler(req, res) {
         expiresAt: result.invite.expiresAt,
       }).catch((err) => console.error('[email] invite email failed', err));
     }
+
+    notifyInviteCreated({
+      inviterEmail: member?.email,
+      inviterName: member?.name,
+      recipientEmail,
+      method: recipientEmail ? 'email' : 'link',
+    }).catch((err) => console.error('[discord] invite created notice failed', err));
 
     return res.status(200).json({
       success: true,

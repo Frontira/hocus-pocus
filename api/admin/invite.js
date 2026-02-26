@@ -1,6 +1,7 @@
 import { requireAdmin } from '../_auth.js';
 import { createAdminInvite, updateGuestlistEntry } from '../_storage.js';
 import { sendInviteEmail } from '../_email.js';
+import { notifyAdminInviteSent } from '../_discord.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -44,6 +45,11 @@ export default async function handler(req, res) {
       inviteUrl: result.inviteUrl,
       expiresAt: result.invite.expiresAt,
     }).catch((err) => console.error('[email] admin invite email failed', err));
+
+    notifyAdminInviteSent({
+      recipientEmail,
+      senderName: result.persona.name,
+    }).catch((err) => console.error('[discord] admin invite notice failed', err));
 
     return res.status(200).json({
       success: true,

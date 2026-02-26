@@ -1,6 +1,7 @@
 import { claimInvite, updateMember, findGuestlistByInviteId, updateGuestlistEntry, ADMIN_PERSONAS } from '../_storage.js';
 import { sendApprovalEmail, sendInviteClaimedNotice } from '../_email.js';
 import { scrapeLinkedInName } from '../_linkedin.js';
+import { notifyInviteClaimed } from '../_discord.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -40,6 +41,10 @@ export default async function handler(req, res) {
         }).catch((err) => console.error('[email] admin invite claimed notice failed', err));
       }
     }
+
+    notifyInviteClaimed({ email, linkedin }).catch((err) =>
+      console.error('[discord] invite claimed notice failed', err)
+    );
 
     // Update guestlist entry if this was an admin invite
     if (result.inviteId) {
