@@ -16,14 +16,14 @@ export default async function handler(req, res) {
     const guestlistId = String(req.body?.guestlistId || '').trim() || null;
     const origin = String(req.body?.origin || req.headers.origin || '').trim();
 
-    if (!recipientEmail) {
-      return res.status(400).json({ error: 'recipientEmail is required' });
-    }
     if (!senderPersona) {
       return res.status(400).json({ error: 'senderPersona is required' });
     }
 
-    const result = await createAdminInvite(origin, { recipientEmail, senderPersona });
+    const result = await createAdminInvite(origin, {
+      recipientEmail: recipientEmail || null,
+      senderPersona,
+    });
     if (result.error) {
       return res.status(400).json({ error: result.error });
     }
@@ -37,17 +37,19 @@ export default async function handler(req, res) {
       }).catch((err) => console.error('[guestlist] update failed', err));
     }
 
-    // Send invite email as the chosen persona (await to ensure delivery)
-    await sendInviteEmail({
-      recipientEmail,
-      inviterEmail: result.persona.email,
-      inviterName: result.persona.name,
-      inviteUrl: result.inviteUrl,
-      expiresAt: result.invite.expiresAt,
-    }).catch((err) => console.error('[email] admin invite email failed', err));
+    // Send invite email if recipient provided
+    if (recipientEmail) {
+      await sendInviteEmail({
+        recipientEmail,
+        inviterEmail: result.persona.email,
+        inviterName: result.persona.name,
+        inviteUrl: result.inviteUrl,
+        expiresAt: result.invite.expiresAt,
+      }).catch((err) => console.error('[email] admin invite email failed', err));
+    }
 
     await notifyAdminInviteSent({
-      recipientEmail,
+      recipientEmail: recipientEmail || '(link only)',
       senderName: result.persona.name,
     }).catch((err) => console.error('[discord] admin invite notice failed', err));
 

@@ -115,6 +115,25 @@
     </section>
 
     <section class="card">
+      <h1 style="font-size:16px;">Quick Invite</h1>
+      <p>Generate an invite link and optionally send it by email.</p>
+      <div class="row">
+        <input id="qi-email" type="email" placeholder="Recipient email (optional)" />
+        <select id="qi-persona">
+          <option value="joanna">Joanna Bakas</option>
+          <option value="thomas">Thomas Pisar</option>
+          <option value="stefan">Stefan Erschwendner</option>
+        </select>
+        <button id="qi-btn">Generate Invite</button>
+      </div>
+      <p id="qi-status"></p>
+      <div id="qi-result" style="display:none; margin-top:10px; background:#0f141d; border:1px solid var(--line); border-radius:8px; padding:12px;">
+        <div class="mono" id="qi-link" style="user-select:all;"></div>
+        <button id="qi-copy" style="margin-top:8px; font-size:12px;">Copy Link</button>
+      </div>
+    </section>
+
+    <section class="card">
       <h1 style="font-size:16px;">Guest List</h1>
       <p>Manage proactive invites. Add people, then send invites on behalf of a team member.</p>
       <div class="row">
@@ -281,6 +300,52 @@
       const appId = btn.getAttribute('data-id');
       const action = btn.getAttribute('data-action');
       updateStatus(appId, action);
+    });
+
+    // ── Quick Invite ───────────────────────────────────────────
+
+    const qiStatusEl = document.getElementById('qi-status');
+    const qiResult = document.getElementById('qi-result');
+    const qiLink = document.getElementById('qi-link');
+
+    async function generateQuickInvite() {
+      const email = document.getElementById('qi-email').value.trim();
+      const persona = document.getElementById('qi-persona').value;
+
+      qiStatusEl.style.color = 'var(--muted)';
+      qiStatusEl.textContent = 'Generating...';
+      qiResult.style.display = 'none';
+
+      try {
+        const body = { senderPersona: persona, origin: window.location.origin };
+        if (email) body.recipientEmail = email;
+        const data = await api('/api/admin/invite', {
+          method: 'POST',
+          body: JSON.stringify(body),
+        });
+
+        const fullUrl = `${window.location.origin}${data.inviteUrl}`;
+        qiLink.textContent = fullUrl;
+        qiResult.style.display = '';
+
+        qiStatusEl.style.color = 'var(--ok)';
+        qiStatusEl.textContent = email
+          ? `Invite sent to ${email} as ${data.senderName} (expires ${new Date(data.expiresAt).toLocaleDateString()})`
+          : `Link generated as ${data.senderName} (expires ${new Date(data.expiresAt).toLocaleDateString()})`;
+
+        document.getElementById('qi-email').value = '';
+      } catch (error) {
+        qiStatusEl.style.color = 'var(--danger)';
+        qiStatusEl.textContent = error.message || 'Failed to generate invite';
+      }
+    }
+
+    document.getElementById('qi-btn').addEventListener('click', generateQuickInvite);
+    document.getElementById('qi-copy').addEventListener('click', () => {
+      navigator.clipboard.writeText(qiLink.textContent).then(() => {
+        document.getElementById('qi-copy').textContent = 'Copied!';
+        setTimeout(() => { document.getElementById('qi-copy').textContent = 'Copy Link'; }, 1500);
+      });
     });
 
     // ── Guest List ─────────────────────────────────────────────
