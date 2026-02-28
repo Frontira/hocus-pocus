@@ -368,7 +368,6 @@ async function createInviteForMember(memberToken, origin, { recipientEmail } = {
 async function createAdminInvite(origin, { recipientEmail, senderPersona }) {
   const persona = ADMIN_PERSONAS[senderPersona];
   if (!persona) return { error: 'Invalid sender persona' };
-  if (!recipientEmail) return { error: 'Recipient email is required' };
 
   const inviteRecord = {
     token: newToken('invite'),
@@ -410,6 +409,7 @@ async function listAdminInvites() {
       }
       return {
         id: inv.id,
+        token: inv.token,
         recipientEmail: inv.recipientEmail,
         senderPersona: inv.senderPersona,
         senderName: ADMIN_PERSONAS[inv.senderPersona]?.name || inv.senderPersona,

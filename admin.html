@@ -134,6 +134,24 @@
     </section>
 
     <section class="card">
+      <h1 style="font-size:16px;">Active Invites</h1>
+      <p>All pending invite links.</p>
+      <table id="inv-table" style="display:none;">
+        <thead>
+          <tr>
+            <th>Recipient</th>
+            <th>Sender</th>
+            <th>Created</th>
+            <th>Expires</th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody id="inv-rows"></tbody>
+      </table>
+      <p id="inv-empty" style="display:none; margin-top:8px;">No active invites.</p>
+    </section>
+
+    <section class="card">
       <h1 style="font-size:16px;">Guest List</h1>
       <p>Manage proactive invites. Add people, then send invites on behalf of a team member.</p>
       <div class="row">
@@ -302,6 +320,61 @@
       updateStatus(appId, action);
     });
 
+    // ── Active Invites ─────────────────────────────────────────
+
+    const invTable = document.getElementById('inv-table');
+    const invRows = document.getElementById('inv-rows');
+    const invEmpty = document.getElementById('inv-empty');
+
+    function inviteRow(inv) {
+      const inviteUrl = `${window.location.origin}/inside.html?invite=${encodeURIComponent(inv.token)}`;
+      const expires = new Date(inv.expiresAt);
+      const isExpired = expires < new Date();
+      const status = inv.status || (isExpired ? 'expired' : 'pending');
+
+      return `
+        <td>${inv.recipientEmail || '<em style="color:var(--muted);">link only</em>'}</td>
+        <td>${inv.senderName}</td>
+        <td>${formatDate(inv.createdAt)}</td>
+        <td><span class="tag ${status}">${status}</span></td>
+        <td>
+          ${status === 'pending' ? `<div class="mono" style="user-select:all;">${inviteUrl}</div>
+          <button class="inv-copy" data-url="${inviteUrl}" style="margin-top:4px; font-size:12px;">Copy</button>` : '-'}
+        </td>
+      `;
+    }
+
+    async function loadInvites() {
+      try {
+        const data = await api('/api/admin/invites');
+        invRows.innerHTML = '';
+        const pending = data.invites.filter((inv) => inv.status === 'pending');
+        if (pending.length === 0) {
+          invTable.style.display = 'none';
+          invEmpty.style.display = '';
+          return;
+        }
+        invEmpty.style.display = 'none';
+        invTable.style.display = '';
+        pending.forEach((inv) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = inviteRow(inv);
+          invRows.appendChild(tr);
+        });
+      } catch {
+        // silent fail
+      }
+    }
+
+    invRows.addEventListener('click', (event) => {
+      const btn = event.target.closest('.inv-copy');
+      if (!btn) return;
+      navigator.clipboard.writeText(btn.dataset.url).then(() => {
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+      });
+    });
+
     // ── Quick Invite ───────────────────────────────────────────
 
     const qiStatusEl = document.getElementById('qi-status');
@@ -334,6 +407,7 @@
           : `Link generated as ${data.senderName} (expires ${new Date(data.expiresAt).toLocaleDateString()})`;
 
         document.getElementById('qi-email').value = '';
+        loadInvites();
       } catch (error) {
         qiStatusEl.style.color = 'var(--danger)';
         qiStatusEl.textContent = error.message || 'Failed to generate invite';
@@ -471,6 +545,7 @@
     });
 
     loadApplications();
+    loadInvites();
     loadGuestList();
   </script>
 </body>
