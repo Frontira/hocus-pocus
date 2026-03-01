@@ -253,6 +253,16 @@ async function updateApplication(applicationId, fields) {
   return supabaseUpdateById(APPLICATIONS_TABLE, applicationId, fields);
 }
 
+async function deleteInvite(id) {
+  if (!isSupabaseEnabled()) {
+    const db = ensureMemoryDb();
+    db.invites = db.invites.filter((a) => String(a.id) !== String(id));
+    return true;
+  }
+  await supabaseDeleteById(INVITES_TABLE, id);
+  return true;
+}
+
 async function updateInvite(inviteId, fields) {
   if (!isSupabaseEnabled()) {
     const db = ensureMemoryDb();
@@ -601,6 +611,7 @@ export {
   createInviteForMember,
   createAdminInvite,
   listAdminInvites,
+  deleteInvite,
   claimInvite,
   getInviteStats,
   listGuestlist,

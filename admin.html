@@ -147,7 +147,7 @@
             <th>Sender</th>
             <th>Created</th>
             <th>Status</th>
-            <th>Link</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody id="inv-rows"></tbody>
@@ -380,14 +380,15 @@
 
       const copyBtn = status === 'pending'
         ? `<button class="inv-copy copy-btn" data-url="${inviteUrl}">Copy</button>`
-        : '-';
+        : '';
+      const delBtn = `<button class="reject inv-del" data-inv-id="${inv.id}" style="font-size:12px;">Delete</button>`;
 
       return `
         <td>${inv.recipientEmail || '<em style="color:var(--muted);">link only</em>'}</td>
         <td>${inv.senderName}</td>
         <td title="${formatDate(inv.createdAt)}">${timeAgo(inv.createdAt)}</td>
         <td><span class="tag ${status}">${status}</span></td>
-        <td>${copyBtn}</td>
+        <td><div class="row" style="margin-top:0;">${copyBtn}${delBtn}</div></td>
       `;
     }
 
@@ -418,13 +419,32 @@
       }
     }
 
+    async function deleteInvite(inviteId) {
+      try {
+        await api('/api/admin/delete-invite', {
+          method: 'POST',
+          body: JSON.stringify({ inviteId }),
+        });
+        loadInvites();
+      } catch (error) {
+        qiStatusEl.style.color = 'var(--danger)';
+        qiStatusEl.textContent = error.message || 'Failed to delete invite';
+      }
+    }
+
     invRows.addEventListener('click', (event) => {
-      const btn = event.target.closest('.inv-copy');
-      if (!btn) return;
-      navigator.clipboard.writeText(btn.dataset.url).then(() => {
-        btn.textContent = 'Copied!';
-        setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
-      });
+      const copyBtn = event.target.closest('.inv-copy');
+      if (copyBtn) {
+        navigator.clipboard.writeText(copyBtn.dataset.url).then(() => {
+          copyBtn.textContent = 'Copied!';
+          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+        });
+        return;
+      }
+      const delBtn = event.target.closest('.inv-del');
+      if (delBtn) {
+        deleteInvite(delBtn.dataset.invId);
+      }
     });
 
     // ── Quick Invite ───────────────────────────────────────────
