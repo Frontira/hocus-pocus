@@ -1,6 +1,7 @@
 import { createInviteForMember, findMemberByToken } from '../_storage.js';
 import { sendInviteEmail } from '../_email.js';
 import { notifyInviteCreated } from '../_discord.js';
+import { logEvent } from '../_events.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -24,22 +25,39 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: result.error });
     }
 
+    const method = recipientEmail ? 'email' : 'link';
+
+    await logEvent('invite.created', {
+      actor: member?.email,
+      target: recipientEmail || null,
+      data: { inviteId: result.invite.id, method, memberId: member?.id, remaining: result.remainingAfterCreate },
+    });
+
     // Send invite email if recipient provided
     if (recipientEmail) {
-      await sendInviteEmail({
+      const emailResult = await sendInviteEmail({
         recipientEmail,
         inviterEmail: member?.email || 'a guest',
         inviterName: member?.name || null,
         inviteUrl: result.inviteUrl,
         expiresAt: result.invite.expiresAt,
-      }).catch((err) => console.error('[email] invite email failed', err));
+      }).catch((err) => {
+        console.error('[email] invite email failed', err);
+        return { ok: false, error: err.message };
+      });
+
+      await logEvent(emailResult?.ok ? 'email.sent' : 'email.failed', {
+        actor: member?.email,
+        target: recipientEmail,
+        data: { template: 'invite', subject: emailResult?.subject, messageId: emailResult?.messageId, error: emailResult?.error, inviteId: result.invite.id },
+      });
     }
 
     await notifyInviteCreated({
       inviterEmail: member?.email,
       inviterName: member?.name,
       recipientEmail,
-      method: recipientEmail ? 'email' : 'link',
+      method,
     }).catch((err) => console.error('[discord] invite created notice failed', err));
 
     return res.status(200).json({
@@ -47,7 +65,7 @@ export default async function handler(req, res) {
       inviteUrl: result.inviteUrl,
       expiresAt: result.invite.expiresAt,
       remainingAfterCreate: result.remainingAfterCreate,
-      method: recipientEmail ? 'email' : 'link',
+      method,
     });
   } catch (error) {
     console.error('invite create error', error);

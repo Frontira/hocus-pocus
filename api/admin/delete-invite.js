@@ -1,5 +1,6 @@
 import { requireAdmin } from '../_auth.js';
 import { deleteInvite } from '../_storage.js';
+import { logEvent } from '../_events.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -14,6 +15,12 @@ export default async function handler(req, res) {
     }
 
     await deleteInvite(inviteId);
+
+    await logEvent('invite.deleted', {
+      actor: 'admin',
+      data: { inviteId },
+    });
+
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error('admin delete-invite error', error);

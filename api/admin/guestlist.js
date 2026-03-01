@@ -1,5 +1,6 @@
 import { requireAdmin } from '../_auth.js';
 import { listGuestlist, addToGuestlist, deleteFromGuestlist, updateGuestlistEntry, ADMIN_PERSONAS } from '../_storage.js';
+import { logEvent } from '../_events.js';
 
 export default async function handler(req, res) {
   if (!requireAdmin(req, res)) return;
@@ -31,6 +32,13 @@ export default async function handler(req, res) {
       }
 
       const entry = await addToGuestlist({ email, linkedin, senderPersona });
+
+      await logEvent('guestlist.added', {
+        actor: 'admin',
+        target: email,
+        data: { guestlistId: entry.id, linkedin, senderPersona },
+      });
+
       return res.status(200).json({
         success: true,
         entry: { ...entry, senderName: ADMIN_PERSONAS[senderPersona]?.name || senderPersona },
@@ -54,6 +62,13 @@ export default async function handler(req, res) {
 
       const updated = await updateGuestlistEntry(id, fields);
       if (!updated) return res.status(404).json({ error: 'Entry not found' });
+
+      await logEvent('guestlist.updated', {
+        actor: 'admin',
+        target: updated.email,
+        data: { guestlistId: id, fields },
+      });
+
       return res.status(200).json({ success: true, entry: updated });
     } catch (error) {
       console.error('guestlist update error', error);
@@ -67,6 +82,12 @@ export default async function handler(req, res) {
       const id = String(req.body?.id || req.query?.id || '').trim();
       if (!id) return res.status(400).json({ error: 'id is required' });
       await deleteFromGuestlist(id);
+
+      await logEvent('guestlist.deleted', {
+        actor: 'admin',
+        data: { guestlistId: id },
+      });
+
       return res.status(200).json({ success: true });
     } catch (error) {
       console.error('guestlist delete error', error);

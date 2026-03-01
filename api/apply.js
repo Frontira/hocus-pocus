@@ -1,6 +1,7 @@
 import { createApplication, isSupabaseEnabled } from './_storage.js';
 import { sendNewApplicationNotice } from './_email.js';
 import { notifyNewApplication } from './_discord.js';
+import { logEvent } from './_events.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -17,15 +18,28 @@ export default async function handler(req, res) {
 
     const app = await createApplication({ email, linkedin, source: 'public' });
 
+    await logEvent('application.created', {
+      actor: email,
+      target: email,
+      data: { applicationId: app.id, linkedin, source: 'public' },
+    });
+
     // Notify organizer
-    await Promise.all([
-      sendNewApplicationNotice({ email, linkedin }).catch((err) =>
-        console.error('[email] new application notice failed', err)
-      ),
+    const [emailResult] = await Promise.all([
+      sendNewApplicationNotice({ email, linkedin }).catch((err) => {
+        console.error('[email] new application notice failed', err);
+        return { ok: false, error: err.message };
+      }),
       notifyNewApplication({ email, linkedin }).catch((err) =>
         console.error('[discord] new application notice failed', err)
       ),
     ]);
+
+    await logEvent(emailResult?.ok ? 'email.sent' : 'email.failed', {
+      actor: 'system',
+      target: 'jb@frontira.io',
+      data: { template: 'new_application_notice', subject: emailResult?.subject, messageId: emailResult?.messageId, error: emailResult?.error, triggerEmail: email },
+    });
 
     return res.status(200).json({
       success: true,

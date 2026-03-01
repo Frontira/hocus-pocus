@@ -1,4 +1,5 @@
 import { EVENT_DETAILS, findMemberByToken, getInviteStats } from './_storage.js';
+import { logEvent } from './_events.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST' && req.method !== 'GET') {
@@ -17,6 +18,12 @@ export default async function handler(req, res) {
     }
 
     const stats = await getInviteStats(token);
+
+    logEvent('access.verified', {
+      actor: member.email,
+      target: member.email,
+      data: { memberId: member.id },
+    });
 
     return res.status(200).json({
       success: true,

@@ -2,6 +2,7 @@ import { requireAdmin } from '../_auth.js';
 import { createAdminInvite, updateGuestlistEntry } from '../_storage.js';
 import { sendInviteEmail } from '../_email.js';
 import { notifyAdminInviteSent } from '../_discord.js';
+import { logEvent } from '../_events.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -28,6 +29,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: result.error });
     }
 
+    await logEvent('invite.created', {
+      actor: 'admin',
+      target: recipientEmail || null,
+      data: { inviteId: result.invite.id, senderPersona, method: 'admin', guestlistId },
+    });
+
     // Link invite to guestlist entry
     if (guestlistId) {
       await updateGuestlistEntry(guestlistId, {
@@ -39,13 +46,22 @@ export default async function handler(req, res) {
 
     // Send invite email if recipient provided
     if (recipientEmail) {
-      await sendInviteEmail({
+      const emailResult = await sendInviteEmail({
         recipientEmail,
         inviterEmail: result.persona.email,
         inviterName: result.persona.name,
         inviteUrl: result.inviteUrl,
         expiresAt: result.invite.expiresAt,
-      }).catch((err) => console.error('[email] admin invite email failed', err));
+      }).catch((err) => {
+        console.error('[email] admin invite email failed', err);
+        return { ok: false, error: err.message };
+      });
+
+      await logEvent(emailResult?.ok ? 'email.sent' : 'email.failed', {
+        actor: result.persona.email,
+        target: recipientEmail,
+        data: { template: 'invite', subject: emailResult?.subject, messageId: emailResult?.messageId, error: emailResult?.error, inviteId: result.invite.id },
+      });
     }
 
     await notifyAdminInviteSent({

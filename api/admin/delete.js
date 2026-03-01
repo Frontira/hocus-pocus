@@ -1,5 +1,6 @@
 import { requireAdmin } from '../_auth.js';
 import { deleteApplication } from '../_storage.js';
+import { logEvent } from '../_events.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -14,6 +15,12 @@ export default async function handler(req, res) {
     }
 
     await deleteApplication(applicationId);
+
+    await logEvent('application.deleted', {
+      actor: 'admin',
+      data: { applicationId },
+    });
+
     return res.status(200).json({ success: true });
   } catch (error) {
     console.error('admin delete error', error);

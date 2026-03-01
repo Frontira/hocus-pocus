@@ -103,6 +103,24 @@
     .header-stats { color: var(--muted); font-size: 14px; }
     .header-stats span { color: var(--text); font-weight: 600; }
 
+    .ev-type {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .ev-type.email { background: #1c3a4f; color: #7ac4e8; }
+    .ev-type.invite { background: #3a2f1c; color: #f0bf72; }
+    .ev-type.application { background: #1c3a2a; color: #71d3a1; }
+    .ev-type.guestlist { background: #2f1c3a; color: #c49de8; }
+    .ev-type.admin { background: #3a1c1c; color: #ef7d7d; }
+    .ev-type.access { background: #1c2f3a; color: #94a3b8; }
+    .ev-type.member { background: #2a3a1c; color: #b5d371; }
+
+    .ev-detail { color: var(--muted); font-size: 12px; max-width: 240px; word-break: break-all; }
+
     .copy-btn {
       font-size: 12px;
       padding: 4px 10px;
@@ -120,6 +138,42 @@
         <button id="logout-btn">Logout</button>
       </div>
       <p id="status"></p>
+    </section>
+
+    <section class="card">
+      <h1 style="font-size:16px;">Event Log</h1>
+      <p>Complete audit trail of all system events.</p>
+      <div class="row">
+        <select id="ev-filter">
+          <option value="">All events</option>
+          <option value="email">Email</option>
+          <option value="invite">Invites</option>
+          <option value="application">Applications</option>
+          <option value="guestlist">Guest List</option>
+          <option value="admin">Admin</option>
+          <option value="access">Access</option>
+          <option value="member">Members</option>
+        </select>
+        <input id="ev-search" type="text" placeholder="Filter by email..." style="flex:0 1 220px;" />
+        <button id="ev-refresh">Refresh</button>
+      </div>
+
+      <table id="ev-table" style="display:none;">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Event</th>
+            <th>Actor</th>
+            <th>Target</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody id="ev-rows"></tbody>
+      </table>
+      <p id="ev-empty" style="margin-top:8px;">Loading events...</p>
+      <div class="row" id="ev-pager" style="display:none;">
+        <button id="ev-more">Load more</button>
+      </div>
     </section>
 
     <section class="card">
@@ -379,12 +433,19 @@
       const status = inv.status || (isExpired ? 'expired' : 'pending');
 
       const copyBtn = status === 'pending'
-        ? `<button class="inv-copy copy-btn" data-url="${inviteUrl}">Copy</button>`
+        ? `<button class="inv-copy copy-btn" data-url="${inviteUrl}">Copy Link</button>`
         : '';
       const delBtn = `<button class="reject inv-del" data-inv-id="${inv.id}" style="font-size:12px;">Delete</button>`;
 
+      const linkLine = status === 'pending'
+        ? `<div class="mono" style="margin-top:4px;font-size:11px;color:var(--muted);user-select:all;">${inviteUrl}</div>`
+        : '';
+
       return `
-        <td>${inv.recipientEmail || '<em style="color:var(--muted);">link only</em>'}</td>
+        <td>
+          ${inv.recipientEmail || '<em style="color:var(--muted);">link only</em>'}
+          ${linkLine}
+        </td>
         <td>${inv.senderName}</td>
         <td title="${formatDate(inv.createdAt)}">${timeAgo(inv.createdAt)}</td>
         <td><span class="tag ${status}">${status}</span></td>
@@ -617,6 +678,107 @@
       }
     });
 
+    // ── Event Log ───────────────────────────────────────────
+
+    const evTable = document.getElementById('ev-table');
+    const evRows = document.getElementById('ev-rows');
+    const evEmpty = document.getElementById('ev-empty');
+    const evPager = document.getElementById('ev-pager');
+    let evOffset = 0;
+    const evLimit = 50;
+
+    const evIcons = {
+      'email.sent': '✉️', 'email.failed': '❌',
+      'invite.created': '🔗', 'invite.claimed': '🎉', 'invite.deleted': '🗑',
+      'application.created': '📋', 'application.approved': '✅', 'application.rejected': '🚫', 'application.deleted': '🗑',
+      'guestlist.added': '📝', 'guestlist.updated': '✏️', 'guestlist.deleted': '🗑',
+      'admin.login': '🔐', 'admin.login_failed': '⚠️',
+      'access.verified': '👁', 'member.enriched': '🔍',
+    };
+
+    function evCategory(type) {
+      return type.split('.')[0];
+    }
+
+    function evDetailHtml(data) {
+      if (!data) return '-';
+      const parts = [];
+      if (data.template) parts.push(`<strong>${data.template}</strong>`);
+      if (data.messageId) parts.push(`ID: ${data.messageId}`);
+      if (data.error) parts.push(`<span style="color:var(--danger);">${data.error}</span>`);
+      if (data.method) parts.push(data.method);
+      if (data.senderPersona) parts.push(`as ${data.senderPersona}`);
+      if (data.remaining !== undefined && data.remaining !== null) parts.push(`${data.remaining} left`);
+      if (data.name) parts.push(data.name);
+      if (data.linkedin) parts.push('LinkedIn');
+      if (parts.length === 0) return '-';
+      return parts.join(' · ');
+    }
+
+    function evRowHtml(ev) {
+      const cat = evCategory(ev.type);
+      const icon = evIcons[ev.type] || '·';
+      const data = typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data;
+      return `
+        <td title="${formatDate(ev.createdAt)}">${timeAgo(ev.createdAt)}</td>
+        <td><span class="ev-type ${cat}">${icon} ${ev.type}</span></td>
+        <td>${ev.actor || '-'}</td>
+        <td>${ev.target || '-'}</td>
+        <td class="ev-detail">${evDetailHtml(data)}</td>
+      `;
+    }
+
+    async function loadEvents(append) {
+      if (!append) {
+        evOffset = 0;
+        evRows.innerHTML = '';
+      }
+
+      try {
+        const filter = document.getElementById('ev-filter').value;
+        const search = document.getElementById('ev-search').value.trim();
+        const params = new URLSearchParams({ limit: evLimit, offset: evOffset });
+        if (filter) params.set('type', filter);
+        if (search) {
+          params.set('target', search);
+        }
+
+        const data = await api(`/api/admin/events?${params.toString()}`);
+        const events = data.events || [];
+
+        if (events.length === 0 && evOffset === 0) {
+          evTable.style.display = 'none';
+          evEmpty.textContent = 'No events recorded yet.';
+          evEmpty.style.display = '';
+          evPager.style.display = 'none';
+          return;
+        }
+
+        evTable.style.display = '';
+        evEmpty.style.display = 'none';
+
+        events.forEach((ev) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = evRowHtml(ev);
+          evRows.appendChild(tr);
+        });
+
+        evOffset += events.length;
+        evPager.style.display = events.length >= evLimit ? '' : 'none';
+      } catch {
+        evEmpty.textContent = 'Failed to load events.';
+        evEmpty.style.display = '';
+      }
+    }
+
+    document.getElementById('ev-refresh').addEventListener('click', () => loadEvents(false));
+    document.getElementById('ev-more').addEventListener('click', () => loadEvents(true));
+    document.getElementById('ev-filter').addEventListener('change', () => loadEvents(false));
+    document.getElementById('ev-search').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') loadEvents(false);
+    });
+
+    loadEvents(false);
     loadApplications();
     loadInvites();
     loadGuestList();

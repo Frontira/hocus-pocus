@@ -2,6 +2,7 @@ import { claimInvite, updateMember, findGuestlistByInviteId, updateGuestlistEntr
 import { sendApprovalEmail, sendInviteClaimedNotice } from '../_email.js';
 import { scrapeLinkedInName } from '../_linkedin.js';
 import { notifyInviteClaimed } from '../_discord.js';
+import { logEvent } from '../_events.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -18,27 +19,60 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: result.error });
     }
 
+    await logEvent('invite.claimed', {
+      actor: email,
+      target: result.inviter?.email || result.senderPersona || null,
+      data: { inviteId: result.inviteId, memberId: result.member.id, linkedin, inviterMemberId: result.inviter?.id },
+    });
+
     // Send "You're in" email to the new member
-    await sendApprovalEmail({
+    const approvalResult = await sendApprovalEmail({
       email,
       memberToken: result.member.accessToken,
-    }).catch((err) => console.error('[email] claim approval email failed', err));
+    }).catch((err) => {
+      console.error('[email] claim approval email failed', err);
+      return { ok: false, error: err.message };
+    });
+
+    await logEvent(approvalResult?.ok ? 'email.sent' : 'email.failed', {
+      actor: 'system',
+      target: email,
+      data: { template: 'approval', subject: approvalResult?.subject, messageId: approvalResult?.messageId, error: approvalResult?.error },
+    });
 
     // Notify inviter
     if (result.inviter) {
-      await sendInviteClaimedNotice({
+      const noticeResult = await sendInviteClaimedNotice({
         inviterEmail: result.inviter.email,
         claimerEmail: email,
         remaining: result.inviterRemaining,
-      }).catch((err) => console.error('[email] invite claimed notice failed', err));
+      }).catch((err) => {
+        console.error('[email] invite claimed notice failed', err);
+        return { ok: false, error: err.message };
+      });
+
+      await logEvent(noticeResult?.ok ? 'email.sent' : 'email.failed', {
+        actor: 'system',
+        target: result.inviter.email,
+        data: { template: 'invite_claimed_notice', subject: noticeResult?.subject, messageId: noticeResult?.messageId, error: noticeResult?.error, claimerEmail: email },
+      });
     } else if (result.senderPersona) {
       const persona = ADMIN_PERSONAS[result.senderPersona];
       if (persona) {
-        await sendInviteClaimedNotice({
+        const noticeResult = await sendInviteClaimedNotice({
           inviterEmail: persona.email,
           claimerEmail: email,
           remaining: -1,
-        }).catch((err) => console.error('[email] admin invite claimed notice failed', err));
+        }).catch((err) => {
+          console.error('[email] admin invite claimed notice failed', err);
+          return { ok: false, error: err.message };
+        });
+
+        await logEvent(noticeResult?.ok ? 'email.sent' : 'email.failed', {
+          actor: 'system',
+          target: persona.email,
+          data: { template: 'invite_claimed_notice', subject: noticeResult?.subject, messageId: noticeResult?.messageId, error: noticeResult?.error, claimerEmail: email },
+        });
       }
     }
 
@@ -52,10 +86,19 @@ export default async function handler(req, res) {
       if (entry) await updateGuestlistEntry(entry.id, { status: 'claimed' }).catch(() => {});
     }
 
-    // Enrich member name from LinkedIn (fire and forget - ok if this doesn't complete)
+    // Enrich member name from LinkedIn (fire and forget)
     if (linkedin && !result.member.name) {
       scrapeLinkedInName(linkedin)
-        .then((name) => name && updateMember(result.member.id, { name }))
+        .then((name) => {
+          if (name) {
+            updateMember(result.member.id, { name });
+            logEvent('member.enriched', {
+              actor: 'system',
+              target: email,
+              data: { memberId: result.member.id, name },
+            });
+          }
+        })
         .catch((err) => console.error('[linkedin] enrich failed', err));
     }
 

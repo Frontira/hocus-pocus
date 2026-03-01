@@ -53,14 +53,17 @@ function detail(label, value) {
 // ---------------------------------------------------------------------------
 
 async function send({ to, subject, html, replyTo }) {
+  const recipients = Array.isArray(to) ? to : [{ email: to }];
+  const emails = recipients.map((t) => t.email || t).join(', ');
+
   if (!BREVO_API_KEY) {
     console.warn('[email] BREVO_API_KEY not set, skipping email');
-    return null;
+    return { ok: false, error: 'BREVO_API_KEY not set', subject, recipients: emails };
   }
 
   const payload = {
     sender: FROM,
-    to: Array.isArray(to) ? to : [{ email: to }],
+    to: recipients,
     subject,
     htmlContent: html,
     tags: ['hocus-pocus'],
@@ -83,12 +86,12 @@ async function send({ to, subject, html, replyTo }) {
   if (!response.ok) {
     const text = await response.text();
     console.error('[email] Brevo error', response.status, text);
-    return null;
+    return { ok: false, error: `Brevo ${response.status}: ${text}`, subject, recipients: emails };
   }
 
   const data = await response.json().catch(() => ({}));
-  console.log('[email] sent:', subject, '→', payload.to.map((t) => t.email).join(', '));
-  return data;
+  console.log('[email] sent:', subject, '→', emails);
+  return { ok: true, messageId: data.messageId || null, subject, recipients: emails };
 }
 
 // ---------------------------------------------------------------------------
