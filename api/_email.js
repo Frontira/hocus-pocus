@@ -162,6 +162,7 @@ async function sendInviteEmail({ recipientEmail, inviterEmail, inviterName, invi
     detail('Time', '6:00 PM'),
     detail('Location', 'Ruby Paul Workspace, Vienna'),
     `</div>`,
+    paragraph('Between the doom headlines and the miracle promises, somewhere past the stock market whiplash and the breathless LinkedIn posts, there\'s a quieter reality: AI that works, right now, in actual businesses. Join a conversation about "what\'s possible" and "what\'s practical", in building AI solutions today.'),
     paragraph('Hosted by <strong style="color:#f8f2e9;">Joanna Bakas</strong> (25+ years in strategy, Oxford-trained, co-founder of frontira) and <strong style="color:#f8f2e9;">Dr. Thomas Pisar</strong> (physicist, executive advisor, 25 years leading transformation in tech). No slides, no sponsors - just sharp minds and honest conversation.'),
     btn(inviteUrl, 'Accept Your Invitation'),
     paragraph(`This invitation expires <strong style="color:#f8f2e9;">${expiry}</strong> and can only be used once.`),

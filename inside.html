@@ -574,6 +574,15 @@
         <p style="margin-top: 10px;"><strong style="color: var(--text);">Thomas Pisar</strong> spent 25 years leading transformation in tech organizations. A physicist by training, he brings analytical precision and systems thinking to the question of why change really fails - and what leaders can do about it.</p>
       </article>
 
+      <!-- About the Event -->
+      <article class="card">
+        <p class="card-label">About the Event</p>
+        <h2>AI: What Actually Works</h2>
+        <p>Between the doom headlines and the miracle promises, somewhere past the stock market whiplash and the breathless LinkedIn posts, there's a quieter reality: AI that works, right now, in actual businesses. Not the kind that requires a PhD to understand or a fortune to implement, the kind that makes sales teams faster, customer experience sharper, marketing smarter, and operations leaner.</p>
+        <p style="margin-top: 10px;">This is a conversation between two practitioners who spend their days in the gap between "what's possible" and "what's practical", one building AI solutions that teams actually use, the other helping organisations absorb change without breaking. It's a conversation that you, as an audience, will actively participate in with questions, thoughts and experiences.</p>
+        <p style="margin-top: 10px;">This isn't a keynote. Just two people sharing what they've seen work and fail, followed by a real discussion where your questions shape where we go. You'll leave with a clearer sense of what's worth trying now, what's still hype, and how to move forward without the transformation theatre. If you're tired of theory and ready for something you can actually use on the day after, this is the conversation.</p>
+      </article>
+
       <!-- Venue -->
       <article class="card">
         <p class="card-label">The Location</p>
@@ -851,6 +860,13 @@
     });
 
     (async function init() {
+      // TEMP: preview mode — show inside view directly
+      if (qs.get('preview') === '1') {
+        updateInviteUI(2, []);
+        show(insideView);
+        return;
+      }
+
       if (memberToken) {
         try {
           await loadInside(memberToken);
