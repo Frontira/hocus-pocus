@@ -3,7 +3,7 @@ const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
 const DOMAIN = 'https://hoc-est-corpus-meum.com';
 const FROM = {
-  email: process.env.EMAIL_FROM || 'content@frontira.io',
+  email: process.env.EMAIL_FROM || 'hello@hoc-est-corpus-meum.com',
   name: process.env.EMAIL_FROM_NAME || 'Hocus Pocus',
 };
 
