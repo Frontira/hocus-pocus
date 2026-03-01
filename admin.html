@@ -100,6 +100,14 @@
     .tag.rejected { color: var(--danger); }
     .tag.expired { color: var(--danger); }
 
+    .header-stats { color: var(--muted); font-size: 14px; }
+    .header-stats span { color: var(--text); font-weight: 600; }
+
+    .copy-btn {
+      font-size: 12px;
+      padding: 4px 10px;
+    }
+
     #status { min-height: 18px; margin-top: 8px; }
   </style>
 </head>
@@ -107,7 +115,7 @@
   <main class="shell">
     <section class="card">
       <h1>Hocus Pocus Admin</h1>
-      <p>Review applications and approve members to issue private token links.</p>
+      <p class="header-stats" id="header-stats">Loading...</p>
       <div class="row">
         <button id="logout-btn">Logout</button>
       </div>
@@ -115,8 +123,8 @@
     </section>
 
     <section class="card">
-      <h1 style="font-size:16px;">Quick Invite</h1>
-      <p>Generate an invite link and optionally send it by email.</p>
+      <h1 style="font-size:16px;">Invites</h1>
+      <p>Send personal invitations on behalf of a team member.</p>
       <div class="row">
         <input id="qi-email" type="email" placeholder="Recipient email (optional)" />
         <select id="qi-persona">
@@ -131,29 +139,25 @@
         <div class="mono" id="qi-link" style="user-select:all;"></div>
         <button id="qi-copy" style="margin-top:8px; font-size:12px;">Copy Link</button>
       </div>
-    </section>
 
-    <section class="card">
-      <h1 style="font-size:16px;">Active Invites</h1>
-      <p>All pending invite links.</p>
       <table id="inv-table" style="display:none;">
         <thead>
           <tr>
             <th>Recipient</th>
             <th>Sender</th>
             <th>Created</th>
-            <th>Expires</th>
+            <th>Status</th>
             <th>Link</th>
           </tr>
         </thead>
         <tbody id="inv-rows"></tbody>
       </table>
-      <p id="inv-empty" style="display:none; margin-top:8px;">No active invites.</p>
+      <p id="inv-empty" style="display:none; margin-top:8px;">No invites yet.</p>
     </section>
 
     <section class="card">
       <h1 style="font-size:16px;">Guest List</h1>
-      <p>Manage proactive invites. Add people, then send invites on behalf of a team member.</p>
+      <p>Queue people for batch invitations. Add to the list, then send when ready.</p>
       <div class="row">
         <input id="gl-email" type="email" placeholder="Email" />
         <input id="gl-linkedin" type="url" placeholder="LinkedIn URL" />
@@ -181,7 +185,9 @@
     </section>
 
     <section class="card">
-      <div class="row" style="margin-top: 0;">
+      <h1 style="font-size:16px;">Applications</h1>
+      <p>People who applied through the public page.</p>
+      <div class="row" style="margin-top: 10px;">
         <select id="status-filter">
           <option value="all">All</option>
           <option value="pending">Pending</option>
@@ -210,6 +216,35 @@
     const rows = document.getElementById('rows');
     const statusEl = document.getElementById('status');
 
+    // ── Helpers ────────────────────────────────────────────────
+
+    function timeAgo(iso) {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return '-';
+      const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+      if (seconds < 60) return 'just now';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours}h ago`;
+      const days = Math.floor(hours / 24);
+      if (days < 30) return `${days}d ago`;
+      const months = Math.floor(days / 30);
+      return `${months}mo ago`;
+    }
+
+    function formatDate(iso) {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return '-';
+      return date.toLocaleString();
+    }
+
+    function linkedinSlug(url) {
+      if (!url) return '-';
+      const slug = url.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, '').replace(/\/$/, '');
+      return `<a href="${url}" target="_blank" rel="noreferrer">${slug}</a>`;
+    }
+
     async function api(path, options = {}) {
       const response = await fetch(path, {
         ...options,
@@ -227,11 +262,19 @@
       return data;
     }
 
-    function formatDate(iso) {
-      const date = new Date(iso);
-      if (Number.isNaN(date.getTime())) return '-';
-      return date.toLocaleString();
+    // ── Header Stats ──────────────────────────────────────────
+
+    const statsEl = document.getElementById('header-stats');
+    let cachedCounts = { applications: 0, invites: 0, guestlist: 0 };
+
+    function renderStats() {
+      statsEl.innerHTML =
+        `<span>${cachedCounts.applications}</span> pending applications · ` +
+        `<span>${cachedCounts.invites}</span> active invites · ` +
+        `<span>${cachedCounts.guestlist}</span> on guest list`;
     }
+
+    // ── Applications ──────────────────────────────────────────
 
     function applicationRow(app) {
       const tr = document.createElement('tr');
@@ -240,9 +283,9 @@
         : '';
 
       tr.innerHTML = `
-        <td>${formatDate(app.createdAt)}</td>
+        <td title="${formatDate(app.createdAt)}">${timeAgo(app.createdAt)}</td>
         <td>${app.email || '-'}</td>
-        <td><a href="${app.linkedin || '#'}" target="_blank" rel="noreferrer">${app.linkedin || '-'}</a></td>
+        <td>${linkedinSlug(app.linkedin)}</td>
         <td><span class="tag ${app.status || 'pending'}">${app.status || 'pending'}</span></td>
         <td>
           <div class="row" style="margin-top:0;">
@@ -272,6 +315,9 @@
           tr.innerHTML = '<td colspan="5">No applications</td>';
           rows.appendChild(tr);
         }
+
+        cachedCounts.applications = data.applications.filter((a) => a.status === 'pending').length;
+        renderStats();
 
         statusEl.style.color = 'var(--ok)';
         statusEl.textContent = `Loaded ${apps.length} applications`;
@@ -320,7 +366,7 @@
       updateStatus(appId, action);
     });
 
-    // ── Active Invites ─────────────────────────────────────────
+    // ── Invites (merged) ──────────────────────────────────────
 
     const invTable = document.getElementById('inv-table');
     const invRows = document.getElementById('inv-rows');
@@ -332,15 +378,16 @@
       const isExpired = expires < new Date();
       const status = inv.status || (isExpired ? 'expired' : 'pending');
 
+      const copyBtn = status === 'pending'
+        ? `<button class="inv-copy copy-btn" data-url="${inviteUrl}">Copy</button>`
+        : '-';
+
       return `
         <td>${inv.recipientEmail || '<em style="color:var(--muted);">link only</em>'}</td>
         <td>${inv.senderName}</td>
-        <td>${formatDate(inv.createdAt)}</td>
+        <td title="${formatDate(inv.createdAt)}">${timeAgo(inv.createdAt)}</td>
         <td><span class="tag ${status}">${status}</span></td>
-        <td>
-          ${status === 'pending' ? `<div class="mono" style="user-select:all;">${inviteUrl}</div>
-          <button class="inv-copy" data-url="${inviteUrl}" style="margin-top:4px; font-size:12px;">Copy</button>` : '-'}
-        </td>
+        <td>${copyBtn}</td>
       `;
     }
 
@@ -348,19 +395,24 @@
       try {
         const data = await api('/api/admin/invites');
         invRows.innerHTML = '';
-        const pending = data.invites.filter((inv) => inv.status === 'pending');
-        if (pending.length === 0) {
+        const allInvites = data.invites;
+        if (allInvites.length === 0) {
           invTable.style.display = 'none';
           invEmpty.style.display = '';
+          cachedCounts.invites = 0;
+          renderStats();
           return;
         }
         invEmpty.style.display = 'none';
         invTable.style.display = '';
-        pending.forEach((inv) => {
+        allInvites.forEach((inv) => {
           const tr = document.createElement('tr');
           tr.innerHTML = inviteRow(inv);
           invRows.appendChild(tr);
         });
+
+        cachedCounts.invites = allInvites.filter((inv) => inv.status === 'pending').length;
+        renderStats();
       } catch {
         // silent fail
       }
@@ -490,10 +542,6 @@
     }
 
     function glRowHtml(entry) {
-      const linkedinShort = entry.linkedin
-        ? `<a href="${entry.linkedin}" target="_blank" rel="noreferrer" style="color:var(--muted);">${entry.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//i, '').replace(/\/$/, '')}</a>`
-        : '-';
-
       const sendBtn = entry.status === 'draft'
         ? `<button data-send="${entry.id}" data-email="${entry.email}" data-persona="${entry.senderPersona}" style="font-size:12px;">Send</button>`
         : '';
@@ -504,7 +552,7 @@
 
       return `
         <td>${entry.email}</td>
-        <td>${linkedinShort}</td>
+        <td>${linkedinSlug(entry.linkedin)}</td>
         <td>${entry.senderName || entry.senderPersona}</td>
         <td><span class="tag ${entry.status}">${entry.status}</span></td>
         <td><div class="row" style="margin-top:0;">${actions}</div></td>
@@ -517,6 +565,8 @@
         glRows.innerHTML = '';
         if (data.guestlist.length === 0) {
           glTable.style.display = 'none';
+          cachedCounts.guestlist = 0;
+          renderStats();
           return;
         }
         glTable.style.display = '';
@@ -525,6 +575,9 @@
           tr.innerHTML = glRowHtml(entry);
           glRows.appendChild(tr);
         });
+
+        cachedCounts.guestlist = data.guestlist.length;
+        renderStats();
       } catch {
         // silent fail
       }
