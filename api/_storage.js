@@ -572,6 +572,22 @@ async function findGuestlistByInviteId(inviteId) {
   return list.find((g) => String(g.inviteId) === String(inviteId)) || null;
 }
 
+async function getInviteInfo(inviteToken) {
+  const token = cleanString(inviteToken);
+  if (!token) return null;
+  const invites = await listInvites();
+  const invite = invites.find((row) => row.token === token);
+  if (!invite) return null;
+
+  const info = { recipientEmail: invite.recipientEmail || null, linkedin: null };
+
+  // Try to get linkedin from the guestlist entry
+  const entry = await findGuestlistByInviteId(invite.id).catch(() => null);
+  if (entry?.linkedin) info.linkedin = entry.linkedin;
+
+  return info;
+}
+
 export {
   EVENT_DETAILS,
   ADMIN_PERSONAS,
@@ -592,6 +608,7 @@ export {
   updateGuestlistEntry,
   deleteFromGuestlist,
   findGuestlistByInviteId,
+  getInviteInfo,
   isSupabaseEnabled,
   isAirtableEnabled,
 };
