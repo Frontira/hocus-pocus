@@ -78,6 +78,9 @@
       vertical-align: top;
     }
 
+    a { color: var(--muted); }
+    a:hover { color: var(--text); }
+
     .mono {
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 12px;
@@ -258,6 +261,7 @@
             <th>Email</th>
             <th>LinkedIn</th>
             <th>Sender</th>
+            <th>Created</th>
             <th>Status</th>
             <th>Action</th>
           </tr>
@@ -321,7 +325,12 @@
     function formatDate(iso) {
       const date = new Date(iso);
       if (Number.isNaN(date.getTime())) return '-';
-      return date.toLocaleString();
+      const dd = String(date.getDate()).padStart(2, '0');
+      const mm = String(date.getMonth() + 1).padStart(2, '0');
+      const yy = String(date.getFullYear()).slice(-2);
+      const hh = String(date.getHours()).padStart(2, '0');
+      const mi = String(date.getMinutes()).padStart(2, '0');
+      return `${dd}.${mm}.${yy} ${hh}:${mi}`;
     }
 
     function linkedinSlug(url) {
@@ -368,7 +377,7 @@
         : '';
 
       tr.innerHTML = `
-        <td title="${formatDate(app.createdAt)}">${timeAgo(app.createdAt)}</td>
+        <td title="${timeAgo(app.createdAt)}">${formatDate(app.createdAt)}</td>
         <td>${app.email || '-'}</td>
         <td>${linkedinSlug(app.linkedin)}</td>
         <td><span class="tag ${app.status || 'pending'}">${app.status || 'pending'}</span></td>
@@ -478,7 +487,7 @@
           ${linkLine}
         </td>
         <td>${inv.senderName}</td>
-        <td title="${formatDate(inv.createdAt)}">${timeAgo(inv.createdAt)}</td>
+        <td title="${timeAgo(inv.createdAt)}">${formatDate(inv.createdAt)}</td>
         <td><span class="tag ${status}">${status}</span></td>
         <td><div class="row" style="margin-top:0;">${copyBtn}${delBtn}</div></td>
       `;
@@ -666,6 +675,7 @@
         <td>${entry.email}</td>
         <td>${linkedinSlug(entry.linkedin)}</td>
         <td>${entry.senderName || entry.senderPersona}</td>
+        <td title="${timeAgo(entry.createdAt)}">${formatDate(entry.createdAt)}</td>
         <td><span class="tag ${entry.status}">${entry.status}</span></td>
         <td><div class="row" style="margin-top:0;">${actions}</div></td>
       `;
@@ -751,7 +761,7 @@
       const icon = evIcons[ev.type] || '·';
       const data = typeof ev.data === 'string' ? JSON.parse(ev.data) : ev.data;
       return `
-        <td title="${formatDate(ev.createdAt)}">${timeAgo(ev.createdAt)}</td>
+        <td title="${timeAgo(ev.createdAt)}">${formatDate(ev.createdAt)}</td>
         <td><span class="ev-type ${cat}">${icon} ${ev.type}</span></td>
         <td>${ev.actor || '-'}</td>
         <td>${ev.target || '-'}</td>
