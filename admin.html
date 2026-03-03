@@ -103,6 +103,29 @@
     .header-stats { color: var(--muted); font-size: 14px; }
     .header-stats span { color: var(--text); font-weight: 600; }
 
+    .section-toggle {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .section-toggle::before {
+      content: '▸';
+      font-size: 14px;
+      transition: transform 0.15s;
+      color: var(--muted);
+    }
+    .section-toggle.open::before {
+      transform: rotate(90deg);
+    }
+    .section-body {
+      display: none;
+    }
+    .section-body.open {
+      display: block;
+    }
+
     .ev-type {
       display: inline-block;
       padding: 2px 7px;
@@ -141,7 +164,8 @@
     </section>
 
     <section class="card">
-      <h1 style="font-size:16px;">Event Log</h1>
+      <h1 class="section-toggle" data-section="events" style="font-size:16px;">Event Log</h1>
+      <div class="section-body" data-section="events">
       <p>Complete audit trail of all system events.</p>
       <div class="row">
         <select id="ev-filter">
@@ -174,10 +198,12 @@
       <div class="row" id="ev-pager" style="display:none;">
         <button id="ev-more">Load more</button>
       </div>
+      </div>
     </section>
 
     <section class="card">
-      <h1 style="font-size:16px;">Invites</h1>
+      <h1 class="section-toggle" data-section="invites" style="font-size:16px;">Invites</h1>
+      <div class="section-body" data-section="invites">
       <p>Send personal invitations on behalf of a team member.</p>
       <div class="row">
         <input id="qi-email" type="email" placeholder="Recipient email (optional)" />
@@ -207,10 +233,12 @@
         <tbody id="inv-rows"></tbody>
       </table>
       <p id="inv-empty" style="display:none; margin-top:8px;">No invites yet.</p>
+      </div>
     </section>
 
     <section class="card">
-      <h1 style="font-size:16px;">Guest List</h1>
+      <h1 class="section-toggle open" data-section="guestlist" style="font-size:16px;">Guest List</h1>
+      <div class="section-body open" data-section="guestlist">
       <p>Queue people for batch invitations. Add to the list, then send when ready.</p>
       <div class="row">
         <input id="gl-email" type="email" placeholder="Email" />
@@ -236,10 +264,12 @@
         </thead>
         <tbody id="gl-rows"></tbody>
       </table>
+      </div>
     </section>
 
     <section class="card">
-      <h1 style="font-size:16px;">Applications</h1>
+      <h1 class="section-toggle" data-section="applications" style="font-size:16px;">Applications</h1>
+      <div class="section-body" data-section="applications">
       <p>People who applied through the public page.</p>
       <div class="row" style="margin-top: 10px;">
         <select id="status-filter">
@@ -263,6 +293,7 @@
         </thead>
         <tbody id="rows"></tbody>
       </table>
+      </div>
     </section>
   </main>
 
@@ -776,6 +807,30 @@
     document.getElementById('ev-filter').addEventListener('change', () => loadEvents(false));
     document.getElementById('ev-search').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') loadEvents(false);
+    });
+
+    // ── Section Toggles ────────────────────────────────────────
+
+    document.querySelectorAll('.section-toggle').forEach((toggle) => {
+      toggle.addEventListener('click', () => {
+        const section = toggle.dataset.section;
+        const body = document.querySelector(`.section-body[data-section="${section}"]`);
+        const isOpen = toggle.classList.toggle('open');
+        body.classList.toggle('open', isOpen);
+        try { localStorage.setItem(`hp-section-${section}`, isOpen ? '1' : '0'); } catch {}
+      });
+
+      // restore saved state
+      const section = toggle.dataset.section;
+      try {
+        const saved = localStorage.getItem(`hp-section-${section}`);
+        if (saved !== null) {
+          const isOpen = saved === '1';
+          const body = document.querySelector(`.section-body[data-section="${section}"]`);
+          toggle.classList.toggle('open', isOpen);
+          body.classList.toggle('open', isOpen);
+        }
+      } catch {}
     });
 
     loadEvents(false);
