@@ -59,6 +59,9 @@ export default async function handler(req, res) {
       if (req.body.email !== undefined) fields.email = String(req.body.email).trim().toLowerCase();
       if (req.body.linkedin !== undefined) fields.linkedin = String(req.body.linkedin).trim();
       if (req.body.senderPersona !== undefined) fields.senderPersona = String(req.body.senderPersona).trim();
+      if (req.body.status !== undefined) fields.status = String(req.body.status).trim();
+      if (req.body.inviteId !== undefined) fields.inviteId = req.body.inviteId;
+      if (req.body.sentAt !== undefined) fields.sentAt = String(req.body.sentAt).trim();
 
       const updated = await updateGuestlistEntry(id, fields);
       if (!updated) return res.status(404).json({ error: 'Entry not found' });

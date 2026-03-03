@@ -712,18 +712,53 @@
           method: 'POST',
           body: JSON.stringify({
             senderPersona: persona,
-            guestlistId: id,
             origin: window.location.origin,
           }),
         });
         const fullUrl = data.inviteUrl.startsWith('http') ? data.inviteUrl : `${window.location.origin}${data.inviteUrl}`;
-        await navigator.clipboard.writeText(fullUrl);
         glStatusEl.style.color = 'var(--ok)';
-        glStatusEl.textContent = `Link copied to clipboard (as ${data.senderName})`;
-        loadGuestList();
+        glStatusEl.textContent = `Link generated as ${data.senderName} - copy and mark as sent when done`;
+
+        const entryTr = glRows.querySelector(`tr[data-entry-id="${id}"]`);
+        if (!entryTr) return;
+        const next = entryTr.nextElementSibling;
+        if (next && next.classList.contains('gl-link-row')) next.remove();
+
+        const linkTr = document.createElement('tr');
+        linkTr.classList.add('gl-link-row');
+        linkTr.innerHTML = `
+          <td colspan="6" style="padding:8px 6px;background:rgba(32,49,73,0.3);">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <div class="mono" style="flex:1;min-width:200px;user-select:all;">${fullUrl}</div>
+              <button data-copyurl="${fullUrl}" class="copy-btn">Copy</button>
+              <button data-confirmsent="${id}" data-invite-id="${data.inviteId}" class="approve" style="font-size:12px;">Sent</button>
+            </div>
+          </td>
+        `;
+        entryTr.after(linkTr);
       } catch (error) {
         glStatusEl.style.color = 'var(--danger)';
         glStatusEl.textContent = error.message || 'Failed to generate link';
+      }
+    }
+
+    async function confirmGuestSent(entryId, inviteId) {
+      try {
+        await api('/api/admin/guestlist', {
+          method: 'PATCH',
+          body: JSON.stringify({
+            id: entryId,
+            status: 'invited',
+            inviteId,
+            sentAt: new Date().toISOString(),
+          }),
+        });
+        glStatusEl.style.color = 'var(--ok)';
+        glStatusEl.textContent = 'Marked as sent';
+        loadGuestList();
+      } catch (error) {
+        glStatusEl.style.color = 'var(--danger)';
+        glStatusEl.textContent = error.message || 'Failed to update';
       }
     }
 
@@ -770,6 +805,7 @@
         data.guestlist.forEach((entry) => {
           glCache[entry.id] = entry;
           const tr = document.createElement('tr');
+          tr.dataset.entryId = entry.id;
           tr.innerHTML = glRowHtml(entry);
           glRows.appendChild(tr);
         });
@@ -792,6 +828,19 @@
       const linkBtn = event.target.closest('[data-genlink]');
       if (linkBtn) {
         generateGuestLink(linkBtn.dataset.genlink, linkBtn.dataset.persona);
+        return;
+      }
+      const copyUrlBtn = event.target.closest('[data-copyurl]');
+      if (copyUrlBtn) {
+        navigator.clipboard.writeText(copyUrlBtn.dataset.copyurl).then(() => {
+          copyUrlBtn.textContent = 'Copied!';
+          setTimeout(() => { copyUrlBtn.textContent = 'Copy'; }, 1500);
+        });
+        return;
+      }
+      const confirmSentBtn = event.target.closest('[data-confirmsent]');
+      if (confirmSentBtn) {
+        confirmGuestSent(confirmSentBtn.dataset.confirmsent, confirmSentBtn.dataset.inviteId);
         return;
       }
       const editBtn = event.target.closest('[data-edit]');

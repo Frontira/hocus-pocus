@@ -71,6 +71,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
+      inviteId: result.invite.id,
       inviteUrl: result.inviteUrl,
       expiresAt: result.invite.expiresAt,
       senderName: result.persona.name,
