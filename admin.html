@@ -600,6 +600,7 @@
     const glStatusEl = document.getElementById('gl-status');
     const glRows = document.getElementById('gl-rows');
     const glTable = document.getElementById('gl-table');
+    let glCache = {};
 
     async function addToGuestList() {
       const email = document.getElementById('gl-email').value.trim();
@@ -662,12 +663,85 @@
       }
     }
 
+    function startEditRow(tr, id) {
+      const entry = glCache[id];
+      if (!entry) return;
+      const cells = tr.querySelectorAll('td');
+      cells[0].innerHTML = `<input type="email" value="${entry.email}" style="font-size:13px;width:100%;flex:unset;" />`;
+      cells[1].innerHTML = `<input type="url" value="${entry.linkedin || ''}" placeholder="LinkedIn URL" style="font-size:13px;width:100%;flex:unset;" />`;
+      cells[2].innerHTML = `<select style="font-size:13px;flex:unset;">
+        <option value="joanna"${entry.senderPersona === 'joanna' ? ' selected' : ''}>Joanna</option>
+        <option value="thomas"${entry.senderPersona === 'thomas' ? ' selected' : ''}>Thomas</option>
+        <option value="stefan"${entry.senderPersona === 'stefan' ? ' selected' : ''}>Stefan</option>
+      </select>`;
+      cells[5].innerHTML = `<div class="row" style="margin-top:0;">
+        <button data-save="${id}" class="approve" style="font-size:12px;">Save</button>
+        <button data-cancel style="font-size:12px;">Cancel</button>
+      </div>`;
+    }
+
+    async function saveGuestEdit(tr, id) {
+      const cells = tr.querySelectorAll('td');
+      const email = cells[0].querySelector('input').value.trim();
+      const linkedin = cells[1].querySelector('input').value.trim();
+      const senderPersona = cells[2].querySelector('select').value;
+      if (!email) {
+        glStatusEl.style.color = 'var(--danger)';
+        glStatusEl.textContent = 'Email is required';
+        return;
+      }
+      try {
+        await api('/api/admin/guestlist', {
+          method: 'PATCH',
+          body: JSON.stringify({ id, email, linkedin, senderPersona }),
+        });
+        glStatusEl.style.color = 'var(--ok)';
+        glStatusEl.textContent = `Updated ${email}`;
+        loadGuestList();
+      } catch (error) {
+        glStatusEl.style.color = 'var(--danger)';
+        glStatusEl.textContent = error.message || 'Failed to update';
+      }
+    }
+
+    async function generateGuestLink(id, persona) {
+      glStatusEl.style.color = 'var(--muted)';
+      glStatusEl.textContent = 'Generating link...';
+      try {
+        const data = await api('/api/admin/invite', {
+          method: 'POST',
+          body: JSON.stringify({
+            senderPersona: persona,
+            guestlistId: id,
+            origin: window.location.origin,
+          }),
+        });
+        const fullUrl = data.inviteUrl.startsWith('http') ? data.inviteUrl : `${window.location.origin}${data.inviteUrl}`;
+        await navigator.clipboard.writeText(fullUrl);
+        glStatusEl.style.color = 'var(--ok)';
+        glStatusEl.textContent = `Link copied to clipboard (as ${data.senderName})`;
+        loadGuestList();
+      } catch (error) {
+        glStatusEl.style.color = 'var(--danger)';
+        glStatusEl.textContent = error.message || 'Failed to generate link';
+      }
+    }
+
     function glRowHtml(entry) {
-      const sendBtn = entry.status === 'draft'
+      const isDraft = entry.status === 'draft';
+      const sendBtn = isDraft
         ? `<button data-send="${entry.id}" data-email="${entry.email}" data-persona="${entry.senderPersona}" style="font-size:12px;">Send</button>`
+        : '';
+      const linkBtn = isDraft
+        ? `<button data-genlink="${entry.id}" data-persona="${entry.senderPersona}" class="copy-btn">Link</button>`
+        : '';
+      const editBtn = isDraft
+        ? `<button data-edit="${entry.id}" style="font-size:12px;">Edit</button>`
         : '';
       const actions = `
         ${sendBtn}
+        ${linkBtn}
+        ${editBtn}
         <button data-del="${entry.id}" class="reject" style="font-size:12px;">Delete</button>
       `;
 
@@ -685,6 +759,7 @@
       try {
         const data = await api('/api/admin/guestlist');
         glRows.innerHTML = '';
+        glCache = {};
         if (data.guestlist.length === 0) {
           glTable.style.display = 'none';
           cachedCounts.guestlist = 0;
@@ -693,6 +768,7 @@
         }
         glTable.style.display = '';
         data.guestlist.forEach((entry) => {
+          glCache[entry.id] = entry;
           const tr = document.createElement('tr');
           tr.innerHTML = glRowHtml(entry);
           glRows.appendChild(tr);
@@ -711,6 +787,26 @@
       const sendBtn = event.target.closest('[data-send]');
       if (sendBtn) {
         sendGuestInvite(sendBtn.dataset.send, sendBtn.dataset.email, sendBtn.dataset.persona);
+        return;
+      }
+      const linkBtn = event.target.closest('[data-genlink]');
+      if (linkBtn) {
+        generateGuestLink(linkBtn.dataset.genlink, linkBtn.dataset.persona);
+        return;
+      }
+      const editBtn = event.target.closest('[data-edit]');
+      if (editBtn) {
+        startEditRow(editBtn.closest('tr'), editBtn.dataset.edit);
+        return;
+      }
+      const saveBtn = event.target.closest('[data-save]');
+      if (saveBtn) {
+        saveGuestEdit(saveBtn.closest('tr'), saveBtn.dataset.save);
+        return;
+      }
+      const cancelBtn = event.target.closest('[data-cancel]');
+      if (cancelBtn) {
+        loadGuestList();
         return;
       }
       const delBtn = event.target.closest('[data-del]');
