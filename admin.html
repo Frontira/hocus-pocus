@@ -272,6 +272,27 @@
     </section>
 
     <section class="card">
+      <h1 class="section-toggle" data-section="confirmed" style="font-size:16px;">Confirmed Guests</h1>
+      <div class="section-body" data-section="confirmed">
+      <p>People who confirmed their attendance (claimed an invite or got approved).</p>
+
+      <table id="cf-table" style="display:none;">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>LinkedIn</th>
+            <th>Confirmed</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody id="cf-rows"></tbody>
+      </table>
+      <p id="cf-empty" style="margin-top:8px;">Loading confirmed guests...</p>
+      </div>
+    </section>
+
+    <section class="card">
       <h1 class="section-toggle" data-section="applications" style="font-size:16px;">Applications</h1>
       <div class="section-body" data-section="applications">
       <p>People who applied through the public page.</p>
@@ -359,10 +380,11 @@
     // ── Header Stats ──────────────────────────────────────────
 
     const statsEl = document.getElementById('header-stats');
-    let cachedCounts = { applications: 0, invites: 0, guestlist: 0 };
+    let cachedCounts = { applications: 0, invites: 0, guestlist: 0, confirmed: 0 };
 
     function renderStats() {
       statsEl.innerHTML =
+        `<span>${cachedCounts.confirmed}</span> confirmed · ` +
         `<span>${cachedCounts.applications}</span> pending applications · ` +
         `<span>${cachedCounts.invites}</span> active invites · ` +
         `<span>${cachedCounts.guestlist}</span> on guest list`;
@@ -864,6 +886,51 @@
       }
     });
 
+    // ── Confirmed Guests ─────────────────────────────────────
+
+    const cfTable = document.getElementById('cf-table');
+    const cfRows = document.getElementById('cf-rows');
+    const cfEmpty = document.getElementById('cf-empty');
+
+    function confirmedRow(member) {
+      const source = member.inviterMemberId ? 'invite' : (member.applicationId ? 'application' : '-');
+      return `
+        <td>${member.name || '-'}</td>
+        <td>${member.email || '-'}</td>
+        <td>${linkedinSlug(member.linkedin)}</td>
+        <td title="${timeAgo(member.createdAt)}">${formatDate(member.createdAt)}</td>
+        <td><span class="tag approved">${source}</span></td>
+      `;
+    }
+
+    async function loadConfirmed() {
+      try {
+        const data = await api('/api/admin/members');
+        cfRows.innerHTML = '';
+        const members = data.members || [];
+        if (members.length === 0) {
+          cfTable.style.display = 'none';
+          cfEmpty.textContent = 'No confirmed guests yet.';
+          cfEmpty.style.display = '';
+          cachedCounts.confirmed = 0;
+          renderStats();
+          return;
+        }
+        cfEmpty.style.display = 'none';
+        cfTable.style.display = '';
+        members.forEach((member) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = confirmedRow(member);
+          cfRows.appendChild(tr);
+        });
+
+        cachedCounts.confirmed = members.length;
+        renderStats();
+      } catch {
+        cfEmpty.textContent = 'Failed to load confirmed guests.';
+      }
+    }
+
     // ── Event Log ───────────────────────────────────────────
 
     const evTable = document.getElementById('ev-table');
@@ -992,6 +1059,7 @@
     loadApplications();
     loadInvites();
     loadGuestList();
+    loadConfirmed();
   </script>
 </body>
 </html>

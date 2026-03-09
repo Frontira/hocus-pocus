@@ -620,6 +620,7 @@ export {
   deleteFromGuestlist,
   findGuestlistByInviteId,
   getInviteInfo,
+  listMembers,
   isSupabaseEnabled,
   isAirtableEnabled,
 };
