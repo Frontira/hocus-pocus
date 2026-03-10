@@ -162,6 +162,16 @@ async function deleteApplication(id) {
   return true;
 }
 
+async function deleteMember(id) {
+  if (!isSupabaseEnabled()) {
+    const db = ensureMemoryDb();
+    db.members = db.members.filter((m) => String(m.id) !== String(id));
+    return true;
+  }
+  await supabaseDeleteById(MEMBERS_TABLE, id);
+  return true;
+}
+
 async function updateMember(memberId, fields) {
   if (!isSupabaseEnabled()) {
     const db = ensureMemoryDb();
@@ -610,6 +620,7 @@ export {
   rejectApplication,
   deleteApplication,
   findMemberByToken,
+  deleteMember,
   updateMember,
   createInviteForMember,
   createAdminInvite,

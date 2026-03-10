@@ -285,6 +285,7 @@
             <th>Invites</th>
             <th>Confirmed</th>
             <th>Source</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="cf-rows"></tbody>
@@ -906,6 +907,7 @@
         </td>
         <td title="${timeAgo(member.createdAt)}">${formatDate(member.createdAt)}</td>
         <td><span class="tag approved">${source}</span></td>
+        <td><button class="reject cf-del" data-member-id="${member.id}" style="font-size:12px;">Delete</button></td>
       `;
     }
 
@@ -984,6 +986,27 @@
         cfEmpty.textContent = 'Failed to load confirmed guests.';
       }
     }
+
+    cfRows.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.cf-del');
+      if (!btn) return;
+      const memberId = btn.dataset.memberId;
+      if (!confirm('Delete this confirmed guest? This cannot be undone.')) return;
+      btn.disabled = true;
+      btn.textContent = '...';
+      try {
+        await api('/api/admin/delete-member', {
+          method: 'POST',
+          body: JSON.stringify({ memberId }),
+        });
+        btn.closest('tr').remove();
+        cachedCounts.confirmed = Math.max(0, (cachedCounts.confirmed || 1) - 1);
+        renderStats();
+      } catch {
+        btn.disabled = false;
+        btn.textContent = 'Delete';
+      }
+    });
 
     // ── Event Log ───────────────────────────────────────────
 
