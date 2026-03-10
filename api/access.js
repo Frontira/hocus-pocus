@@ -36,7 +36,7 @@ export default async function handler(req, res) {
       invites: {
         remaining: stats.remaining,
         totalGenerated: stats.totalGenerated,
-        limit: 2,
+        limit: stats.member?.inviteLimit || 2,
         history: stats.history || [],
       },
     });

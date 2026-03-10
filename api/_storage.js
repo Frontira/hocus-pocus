@@ -339,10 +339,11 @@ async function createInviteForMember(memberToken, origin, { recipientEmail } = {
 
   const invites = await listInvites();
   const createdForMember = invites.filter((row) => row.memberId === member.id);
-  const remaining = Math.max(0, 2 - createdForMember.length);
+  const limit = member.inviteLimit || 2;
+  const remaining = Math.max(0, limit - createdForMember.length);
 
   if (remaining <= 0) {
-    return { error: 'Invite limit reached (2/2 used)' };
+    return { error: `Invite limit reached (${limit}/${limit} used)` };
   }
 
   const inviteRecord = {
@@ -483,7 +484,8 @@ async function claimInvite(inviteToken, payload) {
     inviter = members.find((m) => m.id === invite.memberId) || null;
     const allInvites = await listInvites();
     const inviterInvites = inviter ? allInvites.filter((i) => i.memberId === inviter.id) : [];
-    inviterRemaining = inviter ? Math.max(0, 2 - inviterInvites.length) : 0;
+    const inviterLimit = inviter ? (inviter.inviteLimit || 2) : 2;
+    inviterRemaining = inviter ? Math.max(0, inviterLimit - inviterInvites.length) : 0;
   }
 
   return { member, inviter, inviterRemaining, senderPersona, inviteId: invite.id };
@@ -497,7 +499,8 @@ async function getInviteStats(memberToken) {
 
   const invites = await listInvites();
   const mine = invites.filter((row) => row.memberId === member.id);
-  const remaining = Math.max(0, 2 - mine.length);
+  const limit = member.inviteLimit || 2;
+  const remaining = Math.max(0, limit - mine.length);
 
   const history = mine.map((inv) => {
     let status = 'pending';

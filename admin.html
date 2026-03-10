@@ -282,6 +282,7 @@
             <th>Name</th>
             <th>Email</th>
             <th>LinkedIn</th>
+            <th>Invites</th>
             <th>Confirmed</th>
             <th>Source</th>
           </tr>
@@ -894,13 +895,65 @@
 
     function confirmedRow(member) {
       const source = member.inviterMemberId ? 'invite' : (member.applicationId ? 'application' : '-');
+      const limit = member.inviteLimit || 2;
       return `
         <td>${member.name || '-'}</td>
         <td>${member.email || '-'}</td>
         <td>${linkedinSlug(member.linkedin)}</td>
+        <td class="invite-limit-cell" data-member-id="${member.id}" data-limit="${limit}">
+          <span class="invite-limit-display" style="cursor:pointer;" title="Click to edit">${limit}</span>
+          <input class="invite-limit-input" type="number" min="0" max="99" value="${limit}" style="display:none; width:50px;">
+        </td>
         <td title="${timeAgo(member.createdAt)}">${formatDate(member.createdAt)}</td>
         <td><span class="tag approved">${source}</span></td>
       `;
+    }
+
+    function setupInviteLimitEditing(tr) {
+      const cell = tr.querySelector('.invite-limit-cell');
+      if (!cell) return;
+      const display = cell.querySelector('.invite-limit-display');
+      const input = cell.querySelector('.invite-limit-input');
+      const memberId = cell.dataset.memberId;
+
+      display.addEventListener('click', () => {
+        display.style.display = 'none';
+        input.style.display = '';
+        input.focus();
+        input.select();
+      });
+
+      async function save() {
+        const newLimit = parseInt(input.value, 10);
+        const oldLimit = parseInt(cell.dataset.limit, 10);
+        input.style.display = 'none';
+        display.style.display = '';
+
+        if (isNaN(newLimit) || newLimit < 0 || newLimit === oldLimit) {
+          input.value = oldLimit;
+          return;
+        }
+
+        display.textContent = newLimit;
+        cell.dataset.limit = newLimit;
+
+        try {
+          await api('/api/admin/update-member', {
+            method: 'PATCH',
+            body: JSON.stringify({ memberId, inviteLimit: newLimit }),
+          });
+        } catch {
+          display.textContent = oldLimit;
+          cell.dataset.limit = oldLimit;
+          input.value = oldLimit;
+        }
+      }
+
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        if (e.key === 'Escape') { input.value = cell.dataset.limit; input.blur(); }
+      });
     }
 
     async function loadConfirmed() {
@@ -922,6 +975,7 @@
           const tr = document.createElement('tr');
           tr.innerHTML = confirmedRow(member);
           cfRows.appendChild(tr);
+          setupInviteLimitEditing(tr);
         });
 
         cachedCounts.confirmed = members.length;
